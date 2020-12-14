@@ -17,6 +17,25 @@ Description: Linux kernel headers for 5.10.0 on amd64
  .
  This is useful for people who need to build external modules
 
+Package: linux-headers-5.10.1
+Source: linux-5.10.1
+Version: 5.10.1-1
+Architecture: amd64
+Maintainer: root <root@ark.stargazer.systems>
+Installed-Size: 48615
+Homepage: https://www.kernel.org/
+Priority: optional
+Section: kernel
+Filename: pool/main/l/linux-5.10.1/linux-headers-5.10.1_5.10.1-1_amd64.deb
+Size: 7974808
+SHA256: d9cd41d7842381454e0d3733494b69ef6d9add868652c0d11a4671a780507d82
+SHA1: b05287bb204b89a2c1cfc9de8294e627068445f0
+MD5sum: 9de52b33362bde5a99a968b957a5f256
+Description: Linux kernel headers for 5.10.1 on amd64
+ This package provides kernel header files for 5.10.1 on amd64
+ .
+ This is useful for people who need to build external modules
+
 Package: linux-image-5.10.0
 Source: linux-5.10.0
 Version: 5.10.0-1
