@@ -1,17 +1,23 @@
 # Motivation
 
-For me, debian is the obvious choice for a server. But sometimes I need a more recent kernel. As I am lazy, I do not want to build the kernel and shuffle around the deb-files on my machines, so this is where this repo comes in.
+For me, debian is the obvious choice for a server. But sometimes I need a more
+recent kernel. As I am lazy, I do not want to build the kernel and shuffle 
+around the deb-files on my machines, so this is where this repo comes in.
 
 # Kernel Configuration
 
-I used the debian kernel configuration found in /boot/config-* and imported it using `make oldconfig` and used the default values offered.
+I used the debian kernel configuration found in /boot/config-* and imported 
+it using `make oldconfig` and used the default values offered.
 
 Changes due to what I need are:
 - enabled virtio RNG as a hardware RNG for me to be used on KVM guests
 
 ## How to request inclusion of drivers
-If you have some shiny piece of hardware that is not yet supported by the kernel itself, you're out of luck as I do not 
-write custom kernel modules. But if your hardware is supported by upstream, file an [issue](https://github.com/ToeiRei/kernel-deb/issues/new) stating the CONFIG_ option and I will see what I can do.
+If you have some shiny piece of hardware that is not yet supported by the 
+[kernel](kernel.org) itself, you're out of luck as I do not write custom 
+kernel modules. But if your hardware is supported by upstream, file an
+[issue](https://github.com/ToeiRei/kernel-deb/issues/new) stating the 
+CONFIG_ option and I will see what I can do.
 
 # Debian Kernel from vanilla sources
 
