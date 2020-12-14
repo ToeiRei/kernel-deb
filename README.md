@@ -4,7 +4,9 @@ For me, debian is the obvious choice for a server. But sometimes I need a more r
 
 ## Kernel Configuration
 
-I used the debian kernel configuration found in /boot/config-* and imported it using `make oldconfig` and used the default values offered. Changes due to what I need are:
+I used the debian kernel configuration found in /boot/config-* and imported it using `make oldconfig` and used the default values offered.
+
+Changes due to what I need are:
 - enabled virtio RNG as a hardware RNG for me to be used on KVM guests
 
 ## Debian Kernel from vanilla sources
@@ -32,10 +34,8 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 
 To list and remove a key from apt sources use the following commands respectively:
 
-```
-apt-key list
-sudo apt-key del KEY.ID
-```
+`apt-key list`
+`sudo apt-key del KEY.ID`
 
 2. Remove the repository from your sources.list or remove the file from sources.list.d
 
