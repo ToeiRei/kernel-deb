@@ -21,7 +21,10 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 2. Add the repository to your sources.list or sources.list.d
    `deb http://toeirei.github.io/kernel-deb buster main`
 
-3. Install the kernel
+3. Make sure apt-transport-https is installed
+   `apt install apt-transport-https`
+
+4. Install the kernel
    `apt update`
    `apt install vanilla-kernel`
 
