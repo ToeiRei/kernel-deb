@@ -1,0 +1,19 @@
+Package: vanilla-kernel
+Version: 5.10.0
+Architecture: amd64
+Maintainer: Viktoria Rei Bauer <debian@stargazer.at>
+Installed-Size: 9
+Depends: linux-image-5.10.0, linux-headers-5.10.0, linux-libc-dev
+Conflicts: kernel-image
+Replaces: kernel-image
+Provides: kernel-image
+Multi-Arch: foreign
+Priority: optional
+Section: kernel
+Filename: pool/main/v/vanilla-kernel/vanilla-kernel_5.10.0_amd64.deb
+Size: 2280
+SHA256: 2160e317b92b5268e3b1782ba146846a73877957a1e1133519e485aa313fe5a1
+SHA1: 7bdf03a20b185e29f21c03c6d0733fdc6940f52e
+MD5sum: eb4f006a4aee295a0ae65384c3616be0
+Description: Meta-Package for vanilla kernel built based on debian .config
+

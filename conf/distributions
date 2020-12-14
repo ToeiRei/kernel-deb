@@ -1,0 +1,7 @@
+Origin: https://toeirei.github.io/kernel-deb
+Label: https://toeirei.github.io/kernel-deb
+Codename: buster
+Architectures: amd64
+Components: main
+Description: Kernel.org kernel built for debian 10
+SignWith: 7BAABD559DCE074A

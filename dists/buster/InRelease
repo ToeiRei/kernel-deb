@@ -1,0 +1,33 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: https://toeirei.github.io/kernel-deb
+Label: https://toeirei.github.io/kernel-deb
+Codename: buster
+Date: Mon, 14 Dec 2020 18:35:20 UTC
+Architectures: amd64
+Components: main
+Description: Kernel.org kernel built for debian 10
+MD5Sum:
+ dd1f6b4bb82af31b920cf7f680e92be0 639 main/binary-amd64/Packages
+ 79ce9b9ea409fb7a01b134920c1fb5db 425 main/binary-amd64/Packages.gz
+ 3f0c266cd9e23831a5a4021ed4ae1e75 176 main/binary-amd64/Release
+SHA1:
+ 9fe1d52edefc4cca98da1202fecec036773bd922 639 main/binary-amd64/Packages
+ 44d7b19c864784fa654a194e97e820115995a8bb 425 main/binary-amd64/Packages.gz
+ 1acdb2b608a177ea4cd6879495f8dd0387a79b35 176 main/binary-amd64/Release
+SHA256:
+ 9d42487e48cc128569b3ec52bc056af6c1a3e33292ee9a6c0fc93f12307823d2 639 main/binary-amd64/Packages
+ 1dc14acdfced45047fff3bfec662dfaa6967fb3bc6de018ccce00cdaead8b351 425 main/binary-amd64/Packages.gz
+ 672f3b50909da2d9fb84fd86c83fef9a3eae58ce5ee2e132b98fcb494321977e 176 main/binary-amd64/Release
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCgAdFiEEaTvT1XL+NQ1S7i2Xe6q9VZ3OB0oFAl/XsG4ACgkQe6q9VZ3O
+B0pvsggAj4pfQZx1uca0lNiuxSftIvjVJIAYrg7xyaoUv3+900ViDucyYPHKpfr/
+Qih0sryTkL7xv12Vj+QzAK5YYk4OdcbhopNRjbtrIbttWQh1N49VFcjSlb1St3RO
+SIVnPEDgBlGiqHPG6YtuPhMUbEJV/yUPIL1adiuUXpTFUEKGFNUzcIuI81CvOwnH
+W9J/GdckGMjFxBoAlNfn7vAdj6socK4fGjQre1wSYCwZ+E86UQITjg1KSzuiDcEr
+1uPQwi2xPkFgXYGURFrqCEO7YRdC5fmF36E6tXCI2zNq5HIBGpAspPqXlMcbIwxb
+j11SOgRgl0PGFA7jEkBrjKgxmV9/HQ==
+=T9HZ
+-----END PGP SIGNATURE-----
