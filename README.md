@@ -2,13 +2,13 @@
 
 ## Motivation
 
-For me, debian is the obvious choice for a server. But sometimes I need a more
+For me, Debian is the obvious choice for a server. But sometimes I need a more
 recent kernel. As I am lazy, I do not want to build the kernel and shuffle 
 around the deb-files on my machines, so this is where this repo comes in.
 
 ## Kernel Configuration
 
-I used the debian kernel configuration found in /boot/config-* and imported 
+I used the **Debian kernel** configuration found in /boot/config-* and imported 
 it using `make oldconfig` and used the default values offered.
 
 Changes due to what I need are:
