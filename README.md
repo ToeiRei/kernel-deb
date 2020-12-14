@@ -19,7 +19,7 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 
 2. Add the repository to your sources.list or sources.list.d
 
-`deb http://USERNAME.github.io/REPOSITORY CODENAME COMPONENT`
+`deb http://toeirei.github.io/kernel-deb buster main`
 
 3. Install the kernel
 
