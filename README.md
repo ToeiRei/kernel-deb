@@ -22,21 +22,21 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
    `deb http://toeirei.github.io/kernel-deb buster main`
 
 3. Make sure apt-transport-https is installed
-   `apt install apt-transport-https`
+   `sudo apt install apt-transport-https`
 
 4. Install the kernel
-   `apt update`
-   `apt install vanilla-kernel`
+   `sudo apt update`
+   `sudo apt install vanilla-kernel`
 
 ## Removal
 
 1. Remove the public GPG key from the apt sources keyring:
 
    To list and remove a key from apt sources use the following commands respectively:
-   `apt-key list`
+   `sudo apt-key list`
    `sudo apt-key del 7BAABD559DCE074A`
 
 2. Remove the repository from your sources.list or remove the file from sources.list.d
 
 3. Remove the kernel packages
-   `apt remove vanilla-kernel`
+   `sudo apt remove vanilla-kernel`
