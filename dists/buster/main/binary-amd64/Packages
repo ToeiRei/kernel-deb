@@ -1,3 +1,21 @@
+Package: linux-image-5.10.0
+Source: linux-5.10.0
+Version: 5.10.0-1
+Architecture: amd64
+Maintainer: root <root@ark.stargazer.systems>
+Installed-Size: 279107
+Homepage: https://www.kernel.org/
+Priority: optional
+Section: kernel
+Filename: pool/main/l/linux-5.10.0/linux-image-5.10.0_5.10.0-1_amd64.deb
+Size: 49630244
+SHA256: 97c6137c3dfbdb7d519ed144bf8ab767c5035f5cd3a9af15c647b8541af43973
+SHA1: a2751b66e90d492b4dbbf91e8eb5d8b4407ad836
+MD5sum: 53e3ee7816d7ec9a67353e019c4172f9
+Description: Linux kernel, version 5.10.0
+ This package contains the Linux kernel, modules and corresponding other
+ files, version: 5.10.0.
+
 Package: linux-libc-dev
 Source: linux-5.10.0
 Version: 5.10.0-1
