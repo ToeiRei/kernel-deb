@@ -13,17 +13,22 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 
 ## Installation
 
-### Add the public GPG key to the apt sources keyring:
+1. Add the public GPG key to the apt sources keyring:
 
 `wget -qO - https://raw.githubusercontent.com/ToeiRei/kernel-deb/main/stargazer.key | sudo apt-key add -`
 
-### Add the repository to your sources.list or sources.list.d
+2. Add the repository to your sources.list or sources.list.d
 
 `deb http://USERNAME.github.io/REPOSITORY CODENAME COMPONENT`
 
+3. Install the kernel
+
+`apt update`
+`apt install vanilla-kernel`
+
 ## Removal
 
-### Remove the public GPG key from the apt sources keyring:
+1. Remove the public GPG key from the apt sources keyring:
 
 To list and remove a key from apt sources use the following commands respectively:
 
@@ -32,4 +37,8 @@ apt-key list
 sudo apt-key del KEY.ID
 ```
 
-### Remove the repository from your sources.list or remove the file from sources.list.d
+2. Remove the repository from your sources.list or remove the file from sources.list.d
+
+3. Remove the kernel packages
+
+`apt remove vanilla-kernel`
