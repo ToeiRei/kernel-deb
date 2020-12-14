@@ -29,19 +29,24 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 
 1. Add the public GPG key to the apt sources keyring:
    ```bash
-   wget -qO - https://raw.githubusercontent.com/ToeiRei/kernel-deb/main/stargazer.key | sudo apt-key add -```
+   wget -qO - https://raw.githubusercontent.com/ToeiRei/kernel-deb/main/stargazer.key | sudo apt-key add -
+   ```
 
 2. Add the repository to your sources.list or sources.list.d
-   `deb http://toeirei.github.io/kernel-deb buster main`
+   ```
+   deb http://toeirei.github.io/kernel-deb buster main
+   ```
 
 3. Make sure apt-transport-https is installed
    ```bash
-   sudo apt install apt-transport-https```
+   sudo apt install apt-transport-https
+   ```
 
 4. Install the kernel
    ```bash
    sudo apt update
-   sudo apt install vanilla-kernel```
+   sudo apt install vanilla-kernel
+   ```
 
 ## Removal
 
@@ -50,10 +55,12 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
    To list and remove a key from apt sources use the following commands respectively:
    ```bash
    sudo apt-key list
-   sudo apt-key del 7BAABD559DCE074A```
+   sudo apt-key del 7BAABD559DCE074A
+   ```
 
 2. Remove the repository from your sources.list or remove the file from sources.list.d
 
 3. Remove the kernel packages
    ```bash
-   sudo apt remove vanilla-kernel```
+   sudo apt remove vanilla-kernel
+   ```
