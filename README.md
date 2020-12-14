@@ -1,37 +1,16 @@
-## Welcome to GitHub Pages
+### Motivation
 
-You can use the [editor on GitHub](https://github.com/ToeiRei/kernel-deb/edit/main/README.md) to maintain and preview the content for your website in Markdown files.
+For me, debian is the obvious choice for a server. But sometimes I need a more recent kernel. As I am lazy, I do not want to build the kernel and shuffle around the deb-files on my machines, so this is where this repo comes in.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+#### Configuration
 
-### Markdown
+I used the debian kernel configuration found in /boot/config-* and imported it using `make oldconfig` and used the default values offered. Changes due to what I need are:
+- enabled virtio RNG as a hardware RNG for me to be used on KVM guests
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+### Debian Kernel from vanilla sources
 
-```markdown
-Syntax highlighted code block
+A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 
-# Header 1
-## Header 2
-### Header 3
+### Installation
 
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/ToeiRei/kernel-deb/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+TBD;
