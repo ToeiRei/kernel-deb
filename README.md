@@ -11,7 +11,7 @@ Changes due to what I need are:
 
 ## How to request inclusion of drivers
 If you have some shiny piece of hardware that is not yet supported by the kernel itself, you're out of luck as I do not 
-write custom kernel modules. But if your hardware is supported by upstream, file an [[issue|https://github.com/ToeiRei/kernel-deb/issues/new]] stating the CONFIG_ option and I will see what I can do.
+write custom kernel modules. But if your hardware is supported by upstream, file an [issue](https://github.com/ToeiRei/kernel-deb/issues/new) stating the CONFIG_ option and I will see what I can do.
 
 # Debian Kernel from vanilla sources
 
