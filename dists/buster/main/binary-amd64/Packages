@@ -1,19 +1,39 @@
+Package: linux-libc-dev
+Source: linux-5.10.0
+Version: 5.10.0-1
+Architecture: amd64
+Maintainer: root <root@ark.stargazer.systems>
+Installed-Size: 5895
+Provides: linux-kernel-headers
+Multi-Arch: same
+Homepage: https://www.kernel.org/
+Priority: optional
+Section: devel
+Filename: pool/main/l/linux-5.10.0/linux-libc-dev_5.10.0-1_amd64.deb
+Size: 1134776
+SHA256: cd0bd41caa9fc08a59875a0aea20139b4d709d6ace042e37e2ea86886efe0c60
+SHA1: e11b131c7b27077213ef637e51de9142183143bf
+MD5sum: 43b7c97313607cf5eefe7c174514521a
+Description: Linux support headers for userspace development
+ This package provides userspaces headers from the Linux kernel.  These headers
+ are used by the installed headers for GNU glibc and other system libraries.
+
 Package: vanilla-kernel
-Version: 5.10.0
+Version: 5.10.1
 Architecture: amd64
 Maintainer: Viktoria Rei Bauer <debian@stargazer.at>
 Installed-Size: 9
-Depends: linux-image-5.10.0, linux-headers-5.10.0, linux-libc-dev
+Depends: linux-image-5.10.1, linux-headers-5.10.1, linux-libc-dev
 Conflicts: kernel-image
 Replaces: kernel-image
 Provides: kernel-image
 Multi-Arch: foreign
 Priority: optional
 Section: kernel
-Filename: pool/main/v/vanilla-kernel/vanilla-kernel_5.10.0_amd64.deb
-Size: 2280
-SHA256: 2160e317b92b5268e3b1782ba146846a73877957a1e1133519e485aa313fe5a1
-SHA1: 7bdf03a20b185e29f21c03c6d0733fdc6940f52e
-MD5sum: eb4f006a4aee295a0ae65384c3616be0
+Filename: pool/main/v/vanilla-kernel/vanilla-kernel_5.10.1_amd64.deb
+Size: 2260
+SHA256: 06efa7323809b39361a6becb20b12da564be3e33735ce6f8a8ad329388a98026
+SHA1: e37a074bbdf3d80bb02d003a9c0b7075f0895636
+MD5sum: 178c1cc8b80164495e0d3893bf140d42
 Description: Meta-Package for vanilla kernel built based on debian .config
 
