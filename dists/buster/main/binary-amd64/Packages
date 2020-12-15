@@ -74,21 +74,21 @@ Description: Linux kernel, version 5.10.0-gameserver
  files, version: 5.10.0-gameserver.
 
 Package: linux-libc-dev
-Source: linux-5.10.0-gameserver
-Version: 5.10.0-gameserver-1
+Source: linux-5.10.1
+Version: 5.10.1-1
 Architecture: amd64
 Maintainer: root <root@ark.stargazer.systems>
-Installed-Size: 5896
+Installed-Size: 5895
 Provides: linux-kernel-headers
 Multi-Arch: same
 Homepage: https://www.kernel.org/
 Priority: optional
 Section: devel
-Filename: pool/main/l/linux-5.10.0-gameserver/linux-libc-dev_5.10.0-gameserver-1_amd64.deb
-Size: 1134720
-SHA256: 86e5131272d2e0e299445e19cd13ec56128f41b6faa6f16cb227ffabfdcea296
-SHA1: 3c68cac8c21b35578c40f33aa342b2c5f6981400
-MD5sum: da71fff3bafaf1230214ed936427289f
+Filename: pool/main/l/linux-5.10.1/linux-libc-dev_5.10.1-1_amd64.deb
+Size: 1134628
+SHA256: 453d2f7079969eeb817d88fc203598fdf484bc4f64b8ddc7727123b169a60450
+SHA1: 9375e8d06d44868bdc2d55c6b6c5043408853324
+MD5sum: 84b60ff6b09307e7848cdd5b05eab337
 Description: Linux support headers for userspace development
  This package provides userspaces headers from the Linux kernel.  These headers
  are used by the installed headers for GNU glibc and other system libraries.
