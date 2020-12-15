@@ -18,7 +18,20 @@ Attention: This kernel is **NOT** signed.
 
 ## FAQs
 
+<<<<<<< HEAD
 see https://toeirei.github.io/kernel-deb/faq/
+=======
+### How to request inclusion of drivers or config change
+If you have some shiny piece of hardware that is not yet supported by the 
+[kernel](https://kernel.org) itself, you're out of luck as I do not write 
+custom kernel modules. But if your hardware is supported by upstream, file an
+[issue](https://github.com/ToeiRei/kernel-deb/issues/new) stating the 
+CONFIG_ option and I will see what I can do.
+
+### Architecture is only amd64
+I do not have the resources to build any other kernels on a foreign architecture
+or cross-compile for some other architecture other than amd64 for now.
+>>>>>>> 81d4850afbd15f3a5dc403bf046a0ef69622f5b7
 
 ## Debian Kernel from vanilla sources
 
