@@ -11,10 +11,12 @@ around the deb-files on my machines, so this is where this repo comes in.
 I used the **Debian kernel** configuration found in /boot/config-* and imported 
 it using `make oldconfig` and used the default values offered.
 
+A linux kernel also knows `make deb-pkg` as a target, so packaging is done in 
+a breeze.
+
 Attention: This kernel is **NOT** signed.
 
-Changes due to what I need are:
-- enabled virtio RNG as a hardware RNG for me to be used on KVM guests
+## FAQs
 
 ### How to request inclusion of drivers
 If you have some shiny piece of hardware that is not yet supported by the 
@@ -23,11 +25,38 @@ custom kernel modules. But if your hardware is supported by upstream, file an
 [issue](https://github.com/ToeiRei/kernel-deb/issues/new) stating the 
 CONFIG_ option and I will see what I can do.
 
+
 ## Debian Kernel from vanilla sources
 
-A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
+Kernel.org recent kernel sources with the trusty old debian config.
 
-## Installation
+Changes:
+- enabled virtio RNG as a hardware RNG for me to be used on KVM guests
+
+## VM Kernel from vanilla sources
+
+Kernel.org recent kernel sources with debian config as a base, most of
+the drivers stripped and tuned to run on a VM
+
+Changes:
+- stripped drivers except for VirtIO, Xen, etc
+- set 'MQ Deadline' as the default IO Scheduler 
+- set default TCP congestion control to be BBR
+
+## Gameserver ready kernel
+
+Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
+running as KVM Guest
+
+Changes:
+- stripped drivers except for VirtIO/KVM/Qemu
+- set 'MQ Deadline' as the default IO Scheduler
+- set default TCP congestion control to be Westwood+ for better networking over WAN/WLAN
+- CONFIG_HZ set to 1000Hz for better responses
+- Preemption Model set to Desktop for better respones
+- Maximum number of CPUs set to 8
+
+# Installation
 
 1. Add the public GPG key to the apt sources keyring:
    ```
@@ -47,10 +76,11 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 4. Install the kernel
    ```
    sudo apt update
-   sudo apt install vanilla-kernel
+   sudo apt install <kernel-flavor>
    ```
+   kernel-flavor can be any of vanilla-kernel, vm-kernel or gameserver-kernel
 
-## Removal
+# Removal
 
 1. Remove the public GPG key from the apt sources keyring:
 
@@ -64,5 +94,5 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 
 3. Remove the kernel packages
    ```
-   sudo apt remove vanilla-kernel
+   sudo apt remove <kernel-flavor>
    ```
