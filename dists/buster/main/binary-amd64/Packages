@@ -1,3 +1,22 @@
+Package: gameserver-kernel
+Version: 5.10.0
+Architecture: amd64
+Maintainer: Viktoria Rei Bauer <debian@stargazer.at>
+Installed-Size: 9
+Depends: linux-image-5.10.0-gameserver, linux-headers-5.10.0-gameserver, linux-libc-dev-gameserver
+Conflicts: kernel-image
+Replaces: kernel-image
+Provides: kernel-image
+Multi-Arch: foreign
+Priority: optional
+Section: kernel
+Filename: pool/main/g/gameserver-kernel/gameserver-kernel_5.10.0_amd64.deb
+Size: 2260
+SHA256: d619b9712c4e275822726901cc4d94c6b33a4073b69a0b41221e6e6bc745f0cf
+SHA1: 46be86c744bbd17cfd1339969d42d3d36fcedf83
+MD5sum: e9ab6b9e6883bb1f15af7b46e9b0c865
+Description: Meta-Package for gameserver vm kernel
+
 Package: linux-headers-5.10.0
 Source: linux-5.10.0
 Version: 5.10.0-1
