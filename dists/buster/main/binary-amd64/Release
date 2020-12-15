@@ -1,5 +1,0 @@
-Component: main
-Origin: https://toeirei.github.io/kernel-deb
-Label: https://toeirei.github.io/kernel-deb
-Architecture: amd64
-Description: Kernel.org kernel built for debian 10
