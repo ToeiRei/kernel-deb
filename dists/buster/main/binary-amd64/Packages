@@ -17,25 +17,6 @@ SHA1: 46be86c744bbd17cfd1339969d42d3d36fcedf83
 MD5sum: e9ab6b9e6883bb1f15af7b46e9b0c865
 Description: Meta-Package for gameserver vm kernel
 
-Package: linux-headers-5.10.0
-Source: linux-5.10.0
-Version: 5.10.0-1
-Architecture: amd64
-Maintainer: root <root@ark.stargazer.systems>
-Installed-Size: 48615
-Homepage: https://www.kernel.org/
-Priority: optional
-Section: kernel
-Filename: pool/main/l/linux-5.10.0/linux-headers-5.10.0_5.10.0-1_amd64.deb
-Size: 7975652
-SHA256: c7c64fd234d942c41a84bf464d46f47704ad12993b1380be2bb03c8bbd342090
-SHA1: bd7ba16aef929632736c91ba20d14563dfbcf696
-MD5sum: 6151e72b28f113d7605328ac05627e7e
-Description: Linux kernel headers for 5.10.0 on amd64
- This package provides kernel header files for 5.10.0 on amd64
- .
- This is useful for people who need to build external modules
-
 Package: linux-headers-5.10.1
 Source: linux-5.10.1
 Version: 5.10.1-1
@@ -110,24 +91,6 @@ Description: Linux kernel, version 5.10.1
  This package contains the Linux kernel, modules and corresponding other
  files, version: 5.10.1.
 
-Package: linux-image-5.10.1-dbg
-Source: linux-5.10.1
-Version: 5.10.1-1
-Architecture: amd64
-Maintainer: root <root@ark.stargazer.systems>
-Installed-Size: 6244992
-Homepage: https://www.kernel.org/
-Priority: optional
-Section: debug
-Filename: pool/main/l/linux-5.10.1/linux-image-5.10.1-dbg_5.10.1-1_amd64.deb
-Size: 860026032
-SHA256: 7bbd5d88b6bd4c5bcb0334fb2a1d2ad00cc75a2fd7db49c36530bb0d054b25ef
-SHA1: e1dd6e9343840f6705a62483896396011fdf92ba
-MD5sum: 6491708a1b76269ad0737b078a10bb8b
-Description: Linux kernel debugging symbols for 5.10.1
- This package will come in handy if you need to debug the kernel. It provides
- all the necessary debug symbols for the kernel and its modules.
-
 Package: linux-image-5.10.1-vm
 Source: linux-5.10.1-vm
 Version: 5.10.1-vm-1
@@ -145,24 +108,6 @@ MD5sum: 32c21998bb7a2214dfe475d5760a4133
 Description: Linux kernel, version 5.10.1-vm
  This package contains the Linux kernel, modules and corresponding other
  files, version: 5.10.1-vm.
-
-Package: linux-image-5.10.1-vm-dbg
-Source: linux-5.10.1-vm
-Version: 5.10.1-vm-1
-Architecture: amd64
-Maintainer: root <root@ark.stargazer.systems>
-Installed-Size: 2304114
-Homepage: https://www.kernel.org/
-Priority: optional
-Section: debug
-Filename: pool/main/l/linux-5.10.1-vm/linux-image-5.10.1-vm-dbg_5.10.1-vm-1_amd64.deb
-Size: 322727956
-SHA256: 10bab08ab85a1115b0008016aabe876f3134e03454b60a575615653562ad78d1
-SHA1: 96bcf16da9e97c9a7af29551c3b9dde3248f2ae6
-MD5sum: 7e07663b95e863778bb0563529846a67
-Description: Linux kernel debugging symbols for 5.10.1-vm
- This package will come in handy if you need to debug the kernel. It provides
- all the necessary debug symbols for the kernel and its modules.
 
 Package: linux-libc-dev
 Source: linux-5.10.1-vm
