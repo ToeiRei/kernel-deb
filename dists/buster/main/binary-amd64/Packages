@@ -72,6 +72,24 @@ Description: Linux kernel, version 5.10.1
  This package contains the Linux kernel, modules and corresponding other
  files, version: 5.10.1.
 
+Package: linux-image-5.10.1-dbg
+Source: linux-5.10.1
+Version: 5.10.1-1
+Architecture: amd64
+Maintainer: root <root@ark.stargazer.systems>
+Installed-Size: 6244992
+Homepage: https://www.kernel.org/
+Priority: optional
+Section: debug
+Filename: pool/main/l/linux-5.10.1/linux-image-5.10.1-dbg_5.10.1-1_amd64.deb
+Size: 860026032
+SHA256: 7bbd5d88b6bd4c5bcb0334fb2a1d2ad00cc75a2fd7db49c36530bb0d054b25ef
+SHA1: e1dd6e9343840f6705a62483896396011fdf92ba
+MD5sum: 6491708a1b76269ad0737b078a10bb8b
+Description: Linux kernel debugging symbols for 5.10.1
+ This package will come in handy if you need to debug the kernel. It provides
+ all the necessary debug symbols for the kernel and its modules.
+
 Package: linux-libc-dev
 Source: linux-5.10.1
 Version: 5.10.1-1
