@@ -18,7 +18,7 @@ Attention: This kernel is **NOT** signed.
 
 ## FAQs
 
-### How to request inclusion of drivers
+### How to request inclusion of drivers or config change
 If you have some shiny piece of hardware that is not yet supported by the 
 [kernel](https://kernel.org) itself, you're out of luck as I do not write 
 custom kernel modules. But if your hardware is supported by upstream, file an
