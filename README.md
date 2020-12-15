@@ -27,7 +27,7 @@ CONFIG_ option and I will see what I can do.
 
 A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
 
-## Installation
+# Installation
 
 1. Add the public GPG key to the apt sources keyring:
    ```
@@ -50,7 +50,7 @@ A linux kernel knows `make deb-pkg` as a target. It just needs to be done.
    sudo apt install vanilla-kernel
    ```
 
-## Removal
+# Removal
 
 1. Remove the public GPG key from the apt sources keyring:
 
