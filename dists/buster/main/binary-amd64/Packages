@@ -146,8 +146,8 @@ Description: Linux kernel debugging symbols for 5.10.1-vm
  all the necessary debug symbols for the kernel and its modules.
 
 Package: linux-libc-dev
-Source: linux-5.10.1
-Version: 5.10.1-1
+Source: linux-5.10.1-vm
+Version: 5.10.1-vm-1
 Architecture: amd64
 Maintainer: root <root@ark.stargazer.systems>
 Installed-Size: 5895
@@ -156,11 +156,11 @@ Multi-Arch: same
 Homepage: https://www.kernel.org/
 Priority: optional
 Section: devel
-Filename: pool/main/l/linux-5.10.1/linux-libc-dev_5.10.1-1_amd64.deb
-Size: 1134628
-SHA256: 453d2f7079969eeb817d88fc203598fdf484bc4f64b8ddc7727123b169a60450
-SHA1: 9375e8d06d44868bdc2d55c6b6c5043408853324
-MD5sum: 84b60ff6b09307e7848cdd5b05eab337
+Filename: pool/main/l/linux-5.10.1-vm/linux-libc-dev_5.10.1-vm-1_amd64.deb
+Size: 1134632
+SHA256: b82300cc9188fe97d1df4a4893b560ca3a34c43b141b814ad504bcd95ade16a7
+SHA1: f1b2c0e5c3c071806085387c5064cdf1c4fb1ac7
+MD5sum: 02cc00692850e110bd5b0e150d948ce7
 Description: Linux support headers for userspace development
  This package provides userspaces headers from the Linux kernel.  These headers
  are used by the installed headers for GNU glibc and other system libraries.
