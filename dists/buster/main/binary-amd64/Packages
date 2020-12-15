@@ -17,6 +17,25 @@ SHA1: 46be86c744bbd17cfd1339969d42d3d36fcedf83
 MD5sum: e9ab6b9e6883bb1f15af7b46e9b0c865
 Description: Meta-Package for gameserver vm kernel
 
+Package: linux-headers-5.10.0-gameserver
+Source: linux-5.10.0-gameserver
+Version: 5.10.0-gameserver-1
+Architecture: amd64
+Maintainer: root <root@ark.stargazer.systems>
+Installed-Size: 46799
+Homepage: https://www.kernel.org/
+Priority: optional
+Section: kernel
+Filename: pool/main/l/linux-5.10.0-gameserver/linux-headers-5.10.0-gameserver_5.10.0-gameserver-1_amd64.deb
+Size: 7934152
+SHA256: 6b8960bd25c766d15c0537111f48cc4fd7e65ace74ad71b41a64af71e999dd25
+SHA1: 5008a20474d4c0e4acef2649fe597fa7e0cb46aa
+MD5sum: 20d9c9efa3e1459c1784e95ed08102a7
+Description: Linux kernel headers for 5.10.0-gameserver on amd64
+ This package provides kernel header files for 5.10.0-gameserver on amd64
+ .
+ This is useful for people who need to build external modules
+
 Package: linux-headers-5.10.1
 Source: linux-5.10.1
 Version: 5.10.1-1
