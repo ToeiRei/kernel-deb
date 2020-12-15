@@ -93,3 +93,22 @@ Description: Linux support headers for userspace development
  This package provides userspaces headers from the Linux kernel.  These headers
  are used by the installed headers for GNU glibc and other system libraries.
 
+Package: vanilla-kernel
+Version: 5.10.1
+Architecture: amd64
+Maintainer: Viktoria Rei Bauer <debian@stargazer.at>
+Installed-Size: 9
+Depends: linux-image-5.10.1, linux-headers-5.10.1, linux-libc-dev
+Conflicts: kernel-image
+Replaces: kernel-image
+Provides: kernel-image
+Multi-Arch: foreign
+Priority: optional
+Section: kernel
+Filename: pool/main/v/vanilla-kernel/vanilla-kernel_5.10.1_amd64.deb
+Size: 2260
+SHA256: 06efa7323809b39361a6becb20b12da564be3e33735ce6f8a8ad329388a98026
+SHA1: e37a074bbdf3d80bb02d003a9c0b7075f0895636
+MD5sum: 178c1cc8b80164495e0d3893bf140d42
+Description: Meta-Package for vanilla kernel built based on debian .config
+
