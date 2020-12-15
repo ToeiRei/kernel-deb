@@ -18,13 +18,7 @@ Attention: This kernel is **NOT** signed.
 
 ## FAQs
 
-### How to request inclusion of drivers
-If you have some shiny piece of hardware that is not yet supported by the 
-[kernel](https://kernel.org) itself, you're out of luck as I do not write 
-custom kernel modules. But if your hardware is supported by upstream, file an
-[issue](https://github.com/ToeiRei/kernel-deb/issues/new) stating the 
-CONFIG_ option and I will see what I can do.
-
+see https://toeirei.github.io/kernel-deb/faq/
 
 ## Debian Kernel from vanilla sources
 
