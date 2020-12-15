@@ -25,6 +25,9 @@ custom kernel modules. But if your hardware is supported by upstream, file an
 [issue](https://github.com/ToeiRei/kernel-deb/issues/new) stating the 
 CONFIG_ option and I will see what I can do.
 
+### Architecture is only amd64
+I do not have the resources to build any other kernels on a foreign architecture
+or cross-compile for some other architecture other than amd64 for now.
 
 ## Debian Kernel from vanilla sources
 
