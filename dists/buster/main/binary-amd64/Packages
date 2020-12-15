@@ -109,6 +109,24 @@ Description: Linux kernel debugging symbols for 5.10.1
  This package will come in handy if you need to debug the kernel. It provides
  all the necessary debug symbols for the kernel and its modules.
 
+Package: linux-image-5.10.1-vm
+Source: linux-5.10.1-vm
+Version: 5.10.1-vm-1
+Architecture: amd64
+Maintainer: root <root@ark.stargazer.systems>
+Installed-Size: 93407
+Homepage: https://www.kernel.org/
+Priority: optional
+Section: kernel
+Filename: pool/main/l/linux-5.10.1-vm/linux-image-5.10.1-vm_5.10.1-vm-1_amd64.deb
+Size: 18938652
+SHA256: 37e8eeb5129193bf4f3d609fcaf5cc2d63e839bafedb43d9b6bc9e1a899c27f2
+SHA1: 44c3540acd3a2cf94767e13e392b01d0ea051a60
+MD5sum: 32c21998bb7a2214dfe475d5760a4133
+Description: Linux kernel, version 5.10.1-vm
+ This package contains the Linux kernel, modules and corresponding other
+ files, version: 5.10.1-vm.
+
 Package: linux-libc-dev
 Source: linux-5.10.1
 Version: 5.10.1-1
