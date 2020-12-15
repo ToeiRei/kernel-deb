@@ -92,6 +92,24 @@ Description: Linux kernel, version 5.10.0
  This package contains the Linux kernel, modules and corresponding other
  files, version: 5.10.0.
 
+Package: linux-image-5.10.0-gameserver
+Source: linux-5.10.0-gameserver
+Version: 5.10.0-gameserver-1
+Architecture: amd64
+Maintainer: root <root@ark.stargazer.systems>
+Installed-Size: 52308
+Homepage: https://www.kernel.org/
+Priority: optional
+Section: kernel
+Filename: pool/main/l/linux-5.10.0-gameserver/linux-image-5.10.0-gameserver_5.10.0-gameserver-1_amd64.deb
+Size: 12505980
+SHA256: 9483f316c23042c12b4099381b9e1cc1e3ee0b1179841f0ba68baefd71317894
+SHA1: 532278ce185ca361efef0d110713088d59e88628
+MD5sum: 6f94d580d4a5ae1cd8a8e5860a2bd7d5
+Description: Linux kernel, version 5.10.0-gameserver
+ This package contains the Linux kernel, modules and corresponding other
+ files, version: 5.10.0-gameserver.
+
 Package: linux-image-5.10.1
 Source: linux-5.10.1
 Version: 5.10.1-1
