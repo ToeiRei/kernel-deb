@@ -184,3 +184,22 @@ SHA1: e37a074bbdf3d80bb02d003a9c0b7075f0895636
 MD5sum: 178c1cc8b80164495e0d3893bf140d42
 Description: Meta-Package for vanilla kernel built based on debian .config
 
+Package: vm-kernel
+Version: 5.10.1
+Architecture: amd64
+Maintainer: Viktoria Rei Bauer <debian@stargazer.at>
+Installed-Size: 9
+Depends: linux-image-5.10.1-vm, linux-headers-5.10.1-vm, linux-libc-dev-vm
+Conflicts: kernel-image
+Replaces: kernel-image
+Provides: kernel-image
+Multi-Arch: foreign
+Priority: optional
+Section: kernel
+Filename: pool/main/v/vm-kernel/vm-kernel_5.10.1_amd64.deb
+Size: 2244
+SHA256: 603ca32964e962d17fc4884f566f8b11260be6b37699696ce4a0a13b9cc086df
+SHA1: 81378669d503af0453ff9559e20124eb0880acf9
+MD5sum: 28b09436047175f2afc47732e244b49d
+Description: Meta-Package for vm-kernel
+
