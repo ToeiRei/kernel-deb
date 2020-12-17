@@ -63,3 +63,5 @@ Changes:
    sudo apt install <kernel-flavor>
    ```
    kernel-flavor can be any of vanilla-kernel, vm-kernel or gameserver-kernel
+
+A big thank you to https://packagecloud.io/ for providing me with repository hosting for those packages as it wouldn't be possible for me to host the repository on my line here.
