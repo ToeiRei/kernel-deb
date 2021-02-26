@@ -3,4 +3,4 @@ title: Kernel.org kernel built for debian 10
 show_downloads: "true"
 
 github:
-  zip_url: https://github.com/ToeiRei/kernel-deb/releases
+  zip_url: https://github.com/ToeiRei/kernel-deb/releases/latest
