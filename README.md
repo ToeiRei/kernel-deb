@@ -26,6 +26,7 @@ Kernel.org recent kernel sources with the trusty old debian config.
 
 Changes:
 - enabled virtio RNG as a hardware RNG for me to be used on KVM guests
+- Added exFAT support
 
 ## VM Kernel from vanilla sources
 
