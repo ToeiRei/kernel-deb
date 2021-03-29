@@ -24,6 +24,9 @@ see https://toeirei.github.io/kernel-deb/faq/
 
 Kernel.org recent kernel sources with the trusty old debian config.
 
+Sources: 
+- https://kernel.org
+
 Changes:
 - enabled virtio RNG as a hardware RNG for me to be used on KVM guests
 - Added exFAT support
@@ -32,6 +35,9 @@ Changes:
 
 Kernel.org recent kernel sources with debian config as a base, most of
 the drivers stripped and tuned to run on a VM
+
+Sources:
+ - https://kernel.org
 
 Changes:
 - stripped drivers except for VirtIO, Xen, etc
@@ -42,6 +48,10 @@ Changes:
 
 Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
 running as KVM Guest
+
+Sources: 
+- https://kernel.org
+- https://dev.gentoo.org/~mpagano/genpatches/
 
 Changes:
 - stripped drivers except for VirtIO/KVM/Qemu
