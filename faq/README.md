@@ -33,9 +33,4 @@ can do - but no promises.
 
 ## Custom Kernels
 I do not have the resources to build custom kernels for you only. In case
-you absolutely want me to do it, feel free to hire me.
-
-## Debug enabled kernels
-Github Pages - this is where I currently host this repository has a 
-file size limit of 100.00 MB - in other words, I cannot publish packages
-bigger than 100MB.
+you absolutely want me to do it, feel free to hire me or fund this project.
