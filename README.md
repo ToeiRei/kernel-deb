@@ -1,7 +1,5 @@
 # Kernel.org Kernels for Debian 10
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/P5P547J7Y)
-
 ## Motivation
 
 For me, Debian is the obvious choice for a server. But sometimes I need a more
