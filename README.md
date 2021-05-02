@@ -44,7 +44,7 @@ Changes:
 - set 'MQ Deadline' as the default IO Scheduler 
 - set default TCP congestion control to be BBR
 
-## Gameserver ready kernel
+## Gameserver ready VM kernel
 
 Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
 running as KVM Guest
