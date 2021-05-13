@@ -1,5 +1,8 @@
 # Kernel.org Kernels for Debian 10
 
+[![Generic badge](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/debian-kernels/buster)
+
+
 ## Motivation
 
 For me, Debian is the obvious choice for a server. But sometimes I need a more
