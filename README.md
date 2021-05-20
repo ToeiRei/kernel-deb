@@ -1,5 +1,8 @@
 # Kernel.org Kernels for Debian 10
 
+[![Generic badge](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/debian-kernels/buster)
+
+
 ## Motivation
 
 For me, Debian is the obvious choice for a server. But sometimes I need a more
@@ -44,7 +47,7 @@ Changes:
 - set 'MQ Deadline' as the default IO Scheduler 
 - set default TCP congestion control to be BBR
 
-## Gameserver ready kernel
+## Gameserver ready VM kernel
 
 Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
 running as KVM Guest
@@ -75,4 +78,8 @@ Changes:
    ```
    kernel-flavor can be any of vanilla-kernel, vm-kernel or gameserver-kernel
 
+
+# Sponsors
 A big thank you to https://packagecloud.io/ for providing me with repository hosting for those packages as it wouldn't be possible for me to host the repository on my line here.
+
+<a href="https://packagecloud.io/"><img height="46" width="158" alt="Private NPM registry and Maven, RPM, DEB, PyPi and RubyGem Repository · packagecloud" src="https://packagecloud.io/images/packagecloud-badge.png" /></a>
