@@ -1,4 +1,4 @@
-# Kernel.org Kernels for Debian 10
+# Recent vanilla Kernels for Debian 10
 
 [![Generic badge](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/debian-kernels/buster)
 
