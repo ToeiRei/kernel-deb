@@ -8,6 +8,12 @@ First of all: Do not panic. The bootloader (usually GRUB) has you covered. Just 
 ## Will the kernel boot on (insert hardware or hypervisor here)
 As I am using the Debian kernel config, the 'vanilla' or 'bare metal' kernels **should** boot anywhere the default debian kernel did run as I did not change drivers. For the 'vm' kernels, they have most of their drivers pulled to reduce their size. If it does not boot, take the 'vanilla' or 'bare metal' kernels, try again and report back please.
 
+## Does this kernel work on Ubuntu?
+Yes, they do. Just keep in mind to grab the vanilla or gentoo-bm if you plan to run it on a physical machine
+
+## What is the difference between 'vm' and the other flavors?
+The 'vm' kernels are stripped down versions of the kernel. Drivers for many devices are removed to make it smaller whereas 'vanilla' and 'bm' drivers indicate that they include all drivers intended to run on physical machines (bare metal) but also include common VM drivers.
+
 
 # Project FAQs
 
