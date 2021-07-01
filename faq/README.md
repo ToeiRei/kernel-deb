@@ -1,5 +1,16 @@
 # Frequently Asked Questions
 
+# Kernel FAQs (shamelessly taken from the issues)
+
+## How to revert to an older kernel
+First of all: Do not panic. The bootloader (usually GRUB) has you covered. Just select the older kernel when booting and remove my packages
+
+## Will the kernel boot on (insert hardware or hypervisor here)
+As I am using the Debian kernel config, the 'vanilla' or 'bare metal' kernels **should** boot anywhere the default debian kernel did run as I did not change drivers. For the 'vm' kernels, they have most of their drivers pulled to reduce their size. If it does not boot, take the 'vanilla' or 'bare metal' kernels, try again and report back please.
+
+
+# Project FAQs
+
 ## How to request inclusion of drivers or config change
 If you have some shiny piece of hardware that is not yet supported by the 
 [kernel](https://kernel.org/) itself, you're out of luck as I do not write
