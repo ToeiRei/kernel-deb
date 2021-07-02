@@ -19,9 +19,7 @@ a breeze.
 
 Attention: This kernel is **NOT** signed.
 
-## FAQs
-
-see https://toeirei.github.io/kernel-deb/faq/
+## [FAQs](https://toeirei.github.io/kernel-deb/faq/)
 
 ## Debian Kernel from vanilla sources
 
@@ -33,6 +31,7 @@ Sources:
 Changes:
 - enabled virtio RNG as a hardware RNG for me to be used on KVM guests
 - Added exFAT support
+- Added Landlock support
 
 ## VM Kernel from vanilla sources
 
@@ -46,6 +45,7 @@ Changes:
 - stripped drivers except for VirtIO, Xen, etc
 - set 'MQ Deadline' as the default IO Scheduler 
 - set default TCP congestion control to be BBR
+- Added Landlock support
 
 ## Gameserver ready VM kernel
 
