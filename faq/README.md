@@ -14,6 +14,8 @@ Yes, they do. Just keep in mind to grab the vanilla or gentoo-bm if you plan to 
 ## What is the difference between 'vm' and the other flavors?
 The 'vm' kernels are stripped down versions of the kernel. Drivers for many devices are removed to make it smaller whereas 'vanilla' and 'bm' drivers indicate that they include all drivers intended to run on physical machines (bare metal) but also include common VM drivers.
 
+## Why 'buster' in the repo names?
+The project started with debian 10 and I didn't think that I would want to continue much further. Life prooved me otherwise.
 
 # Project FAQs
 
