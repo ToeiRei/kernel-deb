@@ -1,4 +1,4 @@
-# Recent vanilla Kernels for Debian 10
+# Recent vanilla Kernels for Debian based distributions
 
 [![Generic badge](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/debian-kernels/buster)
 
@@ -47,7 +47,22 @@ Changes:
 - set default TCP congestion control to be BBR
 - Added Landlock support
 
-## Gameserver ready VM kernel
+## Gentoo based kernel
+
+Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
+running as KVM Guest
+
+Sources: 
+- https://kernel.org
+- https://dev.gentoo.org/~mpagano/genpatches/
+
+Changes:
+- enabled virtio RNG as a hardware RNG for me to be used on KVM guests
+- Added exFAT support
+- Added Landlock support
+- Enabled 'kernel self defense' settings
+
+## Gentoo based VM kernel
 
 Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
 running as KVM Guest
@@ -63,6 +78,8 @@ Changes:
 - CONFIG_HZ set to 1000Hz for better responses
 - Preemption Model set to Desktop for better respones
 - Maximum number of CPUs set to 8
+- Enabled 'kernel self defense' settings
+
 
 # Installation
 
