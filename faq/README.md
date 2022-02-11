@@ -2,8 +2,20 @@
 
 # Kernel FAQs (shamelessly taken from the issues)
 
+## The kernel does not (fully) boot.
+First of all: Do not panic. The kernel builds itself are tested and should run fine. In most cases this might be the linux-firmware package being too old. 
+
+You can solve this by updating your firmware by either picking the files you need from https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git or if you prefer to do so, you can just replace it with a git clone by doing:
+
+```
+apt install git
+cd /lib
+mv firmware firmware.old
+git clone  git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git firmware
+```
+
 ## How to revert to an older kernel
-First of all: Do not panic. The bootloader (usually GRUB) has you covered. Just select the older kernel when booting and remove my packages
+The bootloader (usually GRUB) got you covered. Just select the older kernel when booting and remove my packages
 
 ## Will the kernel boot on (insert hardware or hypervisor here)
 As I am using the Debian kernel config, the 'vanilla' or 'bare metal' kernels **should** boot anywhere the default debian kernel did run as I did not change drivers. For the 'vm' kernels, they have most of their drivers pulled to reduce their size. If it does not boot, take the 'vanilla' or 'bare metal' kernels, try again and report back please.
