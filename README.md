@@ -83,6 +83,8 @@ Changes:
 
 # Installation
 
+## Debian 
+
 1. Add the repository:
    ```
    curl -s https://packagecloud.io/install/repositories/debian-kernels/buster/script.deb.sh | sudo bash
@@ -95,6 +97,17 @@ Changes:
    ```
    kernel-flavor can be any of vanilla-kernel, vm-kernel or gameserver-kernel
 
+
+## Any other distro supporting debian packages
+
+1. Download the zip files from the release page
+2. Unzip the archive
+3. Use dpkg -i to install the packages (`dpkg -i *.deb` works fine on Ubuntu as well)
+
+## Non-DEB Package distros
+
+You may want to try `alien --to-rpm /path/to/file.deb` to convert the package to the format you are using. 
+If this doesn't work, you can convert the packages to be a tarball and unpack the kernel and modules into your system.
 
 # Sponsors
 A big thank you to https://packagecloud.io/ for providing me with repository hosting for those packages as it wouldn't be possible for me to host the repository on my line here.
