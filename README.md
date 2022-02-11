@@ -106,7 +106,8 @@ Changes:
 
 ## Non-DEB Package distros
 
-You may want to try `alien --to-rpm /path/to/file.deb` to convert the package to the format you are using. 
+You may want to try the program [Alien](https://sourceforge.net/projects/alien-pkg-convert/) to convert the package to the format of your liking.
+(Example: `alien --to-rpm /path/to/file.deb`)
 If this doesn't work, you can convert the packages to be a tarball and unpack the kernel and modules into your system.
 
 # Sponsors
