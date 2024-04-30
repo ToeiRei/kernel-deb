@@ -28,10 +28,10 @@ Kernel.org recent kernel sources with the trusty old debian config.
 Sources: 
 - https://kernel.org
 
+Latest sync with debian-kernel config: 2024-04-30
+
 Changes:
-- enabled virtio RNG as a hardware RNG for me to be used on KVM guests
-- Added exFAT support
-- Added Landlock support
+ - none so far
 
 ## VM Kernel from vanilla sources
 
