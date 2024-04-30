@@ -44,8 +44,6 @@ Sources:
 Changes:
 - stripped drivers except for VirtIO, Xen, etc
 - set 'MQ Deadline' as the default IO Scheduler 
-- set default TCP congestion control to be BBR
-- Added Landlock support
 
 ## Gentoo based kernel
 
@@ -57,10 +55,6 @@ Sources:
 - https://dev.gentoo.org/~mpagano/genpatches/
 
 Changes:
-- enabled virtio RNG as a hardware RNG for me to be used on KVM guests
-- Added exFAT support
-- Added Landlock support
-- Enabled 'kernel self defense' settings
 
 ## Gentoo based VM kernel
 
@@ -74,12 +68,6 @@ Sources:
 Changes:
 - stripped drivers except for VirtIO/KVM/Qemu
 - set 'MQ Deadline' as the default IO Scheduler
-- set default TCP congestion control to be Westwood+ for better networking over WAN/WLAN
-- CONFIG_HZ set to 1000Hz for better responses
-- Preemption Model set to Desktop for better respones
-- Maximum number of CPUs set to 8
-- Enabled 'kernel self defense' settings
-
 
 # Installation
 
