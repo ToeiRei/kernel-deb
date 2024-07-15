@@ -45,30 +45,6 @@ Changes:
 - stripped drivers except for VirtIO, Xen, etc
 - set 'MQ Deadline' as the default IO Scheduler 
 
-## Gentoo based kernel
-
-Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
-running as KVM Guest
-
-Sources: 
-- https://kernel.org
-- https://dev.gentoo.org/~mpagano/genpatches/
-
-Changes:
-
-## Gentoo based VM kernel
-
-Kernel.org recent kernel sources with Gentoo Patches tuned for Gameservers
-running as KVM Guest
-
-Sources: 
-- https://kernel.org
-- https://dev.gentoo.org/~mpagano/genpatches/
-
-Changes:
-- stripped drivers except for VirtIO/KVM/Qemu
-- set 'MQ Deadline' as the default IO Scheduler
-
 # Installation
 
 ## Debian 
