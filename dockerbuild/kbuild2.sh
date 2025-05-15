@@ -750,7 +750,7 @@ main() {
     parse_args "$@"
 
     # Handle version detection
-    [[ -z "$KERNEL_VERSION" ]] && detect_kernel_version
+    [[ -z "$KERNEL_VERSION" ]] && detect_latest_kernel
 
     # Command routing
     if [[ "$MENUCONFIG" == true ]]; then
