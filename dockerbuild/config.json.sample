@@ -1,0 +1,18 @@
+{
+	"buildpath": "/build",
+	"configdir": "/config",
+	"releasedir": "/release",
+	"patchdir": "/patches",
+	"ccopts": "ccache gcc",
+	"llvm": "1",
+	"ld": "ld.lld",
+	"homepage": "https://toeirei.github.io/kernel-deb/",
+	"maintainer": "Viktoria Rei Bauer <debian@stargazer.at>",
+	"packagecloud_deb": "debian-kernels/buster/debian/bullseye",
+	"packagecloud_deb2": "debian-kernels/buster/debian/bookworm",
+	"nexus_user": "user_for_nexus",
+	"nexus_pass": "pass_for_nexus",
+	"nexus_repo": "http://nexus.host:8081/repository/DebianKernels/",
+	"wgetparms": "",
+	"ntfy_url": "https://my.ntfy/topic"
+}
