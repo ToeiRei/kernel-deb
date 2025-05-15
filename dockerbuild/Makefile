@@ -27,13 +27,13 @@ vm:  ## Build VM kernel
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS) --vm
 
 build:  ## Build Docker image with local mirror support
-	COMPOSE_BAKE=true $(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true
+	$(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true
 
 run:  ## Run kernel build with optional args
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
 
 menuconfig:  ## Launch kernel menuconfig
-	$(DOCKER_COMPOSE) run --rm $(SERVICE) menuconfig
+	$(DOCKER_COMPOSE) run --rm $(SERVICE) --menuconfig
 
 ##@ Development / Debugging
 
