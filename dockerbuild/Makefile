@@ -27,7 +27,7 @@ vm:
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS) --vm
 
 build:
-	COMPOSE_BAKE=true $(DOCKER_COMPOSE) build
+	COMPOSE_BAKE=true $(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true
 
 run:
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)

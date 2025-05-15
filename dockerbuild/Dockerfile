@@ -12,10 +12,13 @@ ENV LLVM_VERSION=18
 # Conditionally copy local apt mirror files if the build argument is set.
 # Since COPY doesn't support conditionals, we use a RUN block instead.
 # Make sure that sources.list and stargazer.auth are part of the build context (e.g., in dockerbuild/)
+COPY sources.list /tmp/sources.list
+COPY stargazer.auth /tmp/stargazer.auth
+
 RUN if [ "$USE_LOCAL_MIRROR" = "true" ]; then \
       echo "Using local apt mirror configuration"; \
-      cp dockerbuild/sources.list /etc/apt/sources.list && \
-      cp dockerbuild/stargazer.auth /etc/apt/auth.conf.d/stargazer; \
+      cp /tmp/sources.list /etc/apt/sources.list && \
+      cp /tmp/stargazer.auth /etc/apt/auth.conf.d/stargazer; \
     else \
       echo "Skipping local apt mirror configuration"; \
     fi
