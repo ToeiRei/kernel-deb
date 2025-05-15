@@ -148,10 +148,26 @@ release_to_github() {
 
     pushd "/gitrepo" >/dev/null || fatal "Cannot change directory to Git repo"
 
+    # Set temporary Git author identity for commits inside the container
+    # Extract email and name from MAINTAINER variable
+    MAINTAINER_NAME=$(echo "$MAINTAINER" | sed -E 's/(.*) <.*>/\1/')
+    MAINTAINER_EMAIL=$(echo "$MAINTAINER" | sed -E 's/.* <(.*)>/\1/')
+
+    # Set Git identity using extracted values
+    git config user.name "$MAINTAINER_NAME"
+    git config user.email "$MAINTAINER_EMAIL"
+
+
     git add .
     git commit -m "$version" || log "No changes to commit"
-    git tag "$version"
-    git push --tags
+
+    if git rev-parse "$version" >/dev/null 2>&1; then
+        log "Tag '$version' already exists. Skipping tag creation."
+    else
+        git tag "$version"
+        git push --tags
+    fi
+
     git push
 
     local release_notes="${HOME}/release.md"
