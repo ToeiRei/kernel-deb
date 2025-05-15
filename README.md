@@ -28,10 +28,10 @@ Kernel.org recent kernel sources with the trusty old debian config.
 Sources: 
 - https://kernel.org
 
-Latest sync with debian-kernel config: 2024-04-30
+Latest sync with debian-kernel config: 2025-05-16
 
 Changes:
- - none so far
+ - disabled signing (SYSTEM_TRUSTED_KEYS, SYSTEM_REVOCATION_KEYS, CONFIG_SYSTEM_TRUSTED_KEYS)
 
 ## VM Kernel from vanilla sources
 
@@ -42,8 +42,9 @@ Sources:
  - https://kernel.org
 
 Changes:
-- stripped drivers except for VirtIO, Xen, etc
-- set 'MQ Deadline' as the default IO Scheduler 
+ - disabled signing (SYSTEM_TRUSTED_KEYS, SYSTEM_REVOCATION_KEYS, CONFIG_SYSTEM_TRUSTED_KEYS)
+ - stripped drivers except for VirtIO, Xen, etc
+ - set 'MQ Deadline' as the default IO Scheduler 
 
 # Installation
 
