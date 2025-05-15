@@ -746,6 +746,16 @@ main() {
     parse_config
     parse_args "$@"
 
+    # Get the latest kernel version
+    if [[ -z "$KERNEL_VERSION" ]]; then
+        log "No version specified, detecting latest stable version..."
+        if ! KERNEL_VERSION=$(detect_latest_kernel 2>/dev/null); then
+            fatal "Could not determine latest kernel version"
+        fi
+        log "Detected latest stable version: $KERNEL_VERSION"
+    fi
+
+
     if [[ "$MENUCONFIG" == true ]]; then
         run_menuconfig
         exit 0
@@ -763,14 +773,6 @@ main() {
         exit 0
     fi
 
-    # Continue with kernel build process
-    if [[ -z "$KERNEL_VERSION" ]]; then
-        log "No version specified, detecting latest stable version..."
-        if ! KERNEL_VERSION=$(detect_latest_kernel 2>/dev/null); then
-            fatal "Could not determine latest kernel version"
-        fi
-        log "Detected latest stable version: $KERNEL_VERSION"
-    fi
 
     log "Starting build for Linux kernel version: $KERNEL_VERSION"
     log_environment
