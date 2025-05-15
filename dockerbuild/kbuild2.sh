@@ -44,6 +44,7 @@ parse_config() {
         NTFY_URL=$(jq -r '.ntfy_url // empty' "$CONFIG_FILE")
         LLVM=$(jq -r '.llvm // false' "$CONFIG_FILE")
         LD=$(jq -r '.ld // empty' "$CONFIG_FILE")
+        GH_TOKEN=$(jq -r '.gh_token // empty' "$CONFIG_FILE")
     else
         echo "[WARN] $CONFIG_FILE not found, using environment variables (CI mode)"
 
@@ -62,6 +63,7 @@ parse_config() {
         NTFY_URL="${NTFY_URL:-}"
         LLVM="${LLVM:-false}"
         LD="${LD:-}"
+        GH_TOKEN="${GH_TOKEN:-}"
     fi
 }
 
@@ -148,6 +150,11 @@ release_to_github() {
 
     pushd "/gitrepo" >/dev/null || fatal "Cannot change directory to Git repo"
 
+    # Validate MAINTAINER format
+    if [[ ! "$MAINTAINER" =~ .*\<.*@.*\> ]]; then
+        fatal "Invalid MAINTAINER format: '$MAINTAINER'. Expected format: 'Name <email@example.com>'"
+    fi
+
     # Set temporary Git author identity for commits inside the container
     # Extract email and name from MAINTAINER variable
     MAINTAINER_NAME="${MAINTAINER%% <*}"      # Remove everything after ' <'
@@ -171,6 +178,10 @@ release_to_github() {
     fi
 
     git push
+
+    if [[ -z "$GH_TOKEN" ]]; then
+        fatal "GitHub token (GH_TOKEN) is missing. Authentication will fail."
+    fi
 
     export GH_TOKEN="${GH_TOKEN}"
     gh auth status || fatal "GitHub authentication failed"
