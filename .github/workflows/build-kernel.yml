@@ -25,11 +25,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker Image
-        run: docker build -t kernel-builder .
+        run: docker build -f dockerbuild/Dockerfile -t kernel-builder dockerbuild
 
       - name: Ensure required directories exist
         run: mkdir -p build release patches
 
+      # Using Option A: Mount kernel-configs directly as /config
       - name: Run Kernel Build
         run: |
           docker run --rm \
@@ -42,7 +43,7 @@ jobs:
             -e RELEASEDIR=/release \
             -e PATCHDIR=/patches \
             -e MAINTAINER="GitHub Kernel Builder <ghkernel@stargazer.at>" \
-            -e LLVM=true \
+            -e LLVM=false \
             kernel-builder ${{ github.event.inputs.version }}
 
       - name: Upload Artifacts
