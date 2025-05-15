@@ -1,0 +1,54 @@
+name: Build Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Kernel version'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BUILDPATH: /build
+      CONFIGDIR: /config
+      RELEASEDIR: /release
+      PATCHDIR: /patches
+      MAINTAINER: "GitHub Kernel Builder <ci@kernel>"
+      LLVM: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        run: docker build -t kernel-builder .
+
+      # Option A: Using repository's kernel-configs directly as /config
+      - name: Ensure required directories exist
+        run: mkdir -p build release patches
+
+      - name: Run Kernel Build
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/build:/build \
+            -v ${{ github.workspace }}/release:/release \
+            -v ${{ github.workspace }}/kernel-configs:/config \
+            -v ${{ github.workspace }}/patches:/patches \
+            -e BUILDPATH=/build \
+            -e CONFIGDIR=/config \
+            -e RELEASEDIR=/release \
+            -e PATCHDIR=/patches \
+            -e MAINTAINER="GitHub Kernel Builder <ghkernel@stargazer.at>" \
+            -e HOMEPAGE="https://github.com/ToeiRei/kernel-deb"
+            -e LLVM=false \
+            kernel-builder ${{ github.event.inputs.version }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-release
+          path: release/
