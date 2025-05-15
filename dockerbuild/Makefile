@@ -33,7 +33,7 @@ run:  ## Run kernel build with optional args
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
 
 menuconfig:  ## Launch kernel menuconfig
-	$(DOCKER_COMPOSE) run --rm $(SERVICE) --menuconfig
+	$(DOCKER_COMPOSE) run --rm $(SERVICE) --menuconfig $(ARGS)
 
 ##@ Development / Debugging
 
