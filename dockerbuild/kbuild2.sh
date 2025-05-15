@@ -175,11 +175,12 @@ Built with a mildly cursed Bash script.
 EOF
     fi
 
-    # Collect all zip files for release
-    mapfile -t assets < <(find "$RELEASEDIR" -type f -name "*${version}*.zip")
+
+    # Collect all relevant release files
+    mapfile -t assets < <(find "$RELEASEDIR" -type f \( -name "*${version}*.zip" -o -name "*${version}*.zip.sha256sum" \))
 
     if [[ ${#assets[@]} -eq 0 ]]; then
-        fatal "No .zip assets found to attach to GitHub release"
+        fatal "No release assets found in $RELEASEDIR"
     fi
 
     log "Attaching the following assets to release: ${assets[*]}"
