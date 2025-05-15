@@ -167,7 +167,7 @@ release_to_github() {
 
     log "MAINTAINER is set to: ${MAINTAINER_NAME} <${MAINTAINER_EMAIL}>"
 
-    git add .
+    # git add .
     git commit -m "$version" || log "No changes to commit"
 
     if git rev-parse "$version" >/dev/null 2>&1; then
