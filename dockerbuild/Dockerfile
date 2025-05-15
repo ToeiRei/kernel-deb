@@ -18,7 +18,8 @@ COPY stargazer.auth /tmp/stargazer.auth
 RUN if [ "$USE_LOCAL_MIRROR" = "true" ]; then \
       echo "Using local apt mirror configuration"; \
       cp /tmp/sources.list /etc/apt/sources.list && \
-      cp /tmp/stargazer.auth /etc/apt/auth.conf.d/stargazer; \
+      cp /tmp/stargazer.auth /etc/apt/auth.conf.d/stargazer && \
+      rm -f /etc/apt/sources.list.d/*; \
     else \
       echo "Skipping local apt mirror configuration"; \
     fi
