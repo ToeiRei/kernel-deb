@@ -1,5 +1,5 @@
 # Docker compose configuration
-DOCKER_COMPOSE = docker compose
+DOCKER_COMPOSE = COMPOSE_BAKE=true docker compose
 SERVICE = kernel-builder
 SHELL_SERVICE = shell
 ARGS ?=
