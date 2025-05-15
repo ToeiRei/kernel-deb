@@ -1,52 +1,61 @@
+# Docker compose configuration
 DOCKER_COMPOSE = docker compose
 SERVICE = kernel-builder
 SHELL_SERVICE = shell
 ARGS ?=
 
-.PHONY: help all clean mrproper stop build run shell publish logs
-default: vanilla vm
+# Phony targets
+.PHONY: help all default vanilla vm build run shell publish clean mrproper stop logs menuconfig
 
-all: run
+.DEFAULT_GOAL := default
 
-help:
-	@echo "make                    # Default: Full build pipeline (vanilla + VM + publish)"
-	@echo "make all                # Same as default target"
-	@echo "make build              # Build Docker image"
-	@echo "make run ARGS=...       # Run a build with optional args"
-	@echo "make shell              # Drop into container shell"
-	@echo "make publish            # Publish release to GitHub"
-	@echo "make clean              # Clean build artifacts"
-	@echo "make mrproper           # Full nuclear cleanup"
-	@echo "make stop               # Stop the container"
-	@echo "make logs               # View container logs"
+##@ General
 
-vanilla:
+help:  ## Display this help message
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+default: vanilla vm  ## Default target: runs both vanilla and VM builds
+
+all: run  ## Alias for 'run' target
+
+##@ Build Targets
+
+vanilla:  ## Build vanilla kernel
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
 
-vm:
+vm:  ## Build VM kernel
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS) --vm
 
-build:
+build:  ## Build Docker image with local mirror support
 	COMPOSE_BAKE=true $(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true
 
-run:
+run:  ## Run kernel build with optional args
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
 
-shell:
+menuconfig:  ## Launch kernel menuconfig
+	$(DOCKER_COMPOSE) run --rm $(SERVICE) menuconfig
+
+##@ Development / Debugging
+
+shell:  ## Start interactive shell in container
 	$(DOCKER_COMPOSE) run --rm --entrypoint /bin/bash $(SHELL_SERVICE)
 
-publish:
+logs:  ## View container logs
+	$(DOCKER_COMPOSE) logs -f
+
+##@ Release
+
+publish:  ## Publish release to GitHub
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) --publish
 
-clean:
-	rm -rf build/*
+##@ Cleanup
 
-mrproper: clean stop
+clean:  ## Remove build artifacts
+	sudo rm -rf build/*
+
+mrproper: clean stop  ## Full cleanup including Docker and ccache
 	docker system prune -f
-	ccache -C
+	sudo ccache -C
 
-stop:
+stop:  ## Stop and remove containers
 	$(DOCKER_COMPOSE) down
-
-logs:
-	$(DOCKER_COMPOSE) logs -f
