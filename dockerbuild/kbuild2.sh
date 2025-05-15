@@ -257,10 +257,6 @@ configure_kernel() {
 
     pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source directory: $SOURCEDIR"
 
-    # Optional tweaks depending on build mode
-    apply_llvm_tweaks
-    apply_rt_tweaks
-
     # Build up the make options
     local make_opts=()
 
@@ -293,6 +289,8 @@ prepare_source_tree() {
     # Select and copy a baseline configuration
     local config_variant="vanilla"
     [[ "$USE_VM" == true ]] && config_variant="vm"
+    [[ "$USE_RT" == true ]] && config_variant="rt"
+
     local config_source="${CONFIGDIR}/${config_variant}.config"
     log "Copying baseline configuration from $config_source"
     cp "$config_source" "${SOURCEDIR}/.config"
@@ -312,9 +310,7 @@ prepare_source_tree() {
 }
 
 run_menuconfig() {
-    if [[ ! -t 0 ]]; then
-        fatal "Menuconfig requires an interactive terminal"
-    fi
+    [[ ! -t 0 ]] && fatal "Menuconfig requires interactive terminal"
 
     # Prepare the source tree in a consistent way with the rest of the build system.
     prepare_source_tree
@@ -329,7 +325,11 @@ run_menuconfig() {
     # Archive the final configuration for future reproducibility.
     archive_config
 
-    log "Menuconfig complete; updated configuration archived. Exiting."
+    log "Menuconfig complete. To build:"
+    log "  $0 ${KERNEL_VERSION} \\"
+    [[ "$USE_VM" == true ]] && log "    --vm \\"
+    [[ "$USE_RT" == true ]] && log "    --rt \\"
+    [[ "$USE_LLVM" == true ]] && log "    --llvm"
     exit 0
 }
 
@@ -745,44 +745,30 @@ EOF
 }
 
 
-
 main() {
     parse_config
     parse_args "$@"
 
-    # Get the latest kernel version
-    if [[ -z "$KERNEL_VERSION" ]]; then
-        log "No version specified, detecting latest stable version..."
-        if ! KERNEL_VERSION=$(detect_latest_kernel 2>/dev/null); then
-            fatal "Could not determine latest kernel version"
-        fi
-        log "Detected latest stable version: $KERNEL_VERSION"
-    fi
+    # Handle version detection
+    [[ -z "$KERNEL_VERSION" ]] && detect_kernel_version
 
-
+    # Command routing
     if [[ "$MENUCONFIG" == true ]]; then
         run_menuconfig
-        exit 0
-    fi
-
-    # Existing logic for publish, clean, etc...
-    if [[ "$PUBLISH_ONLY" == true ]]; then
+    elif [[ "$PUBLISH_ONLY" == true ]]; then
         release_to_github "$KERNEL_VERSION"
-        exit 0
-    fi
-
-    if [[ "$CLEAN_BUILD" == true ]]; then
-        log "Clean mode enabled. Purging build artifacts..."
+    elif [[ "$CLEAN_BUILD" == true ]]; then
         cleanup_artifacts
-        exit 0
+    else
+        run_standard_build
     fi
+    exit 0
+}
 
-
-    log "Starting build for Linux kernel version: $KERNEL_VERSION"
+run_standard_build() {
+    log "Starting build for Linux $KERNEL_VERSION"
     log_environment
-    fetch_sources
-    configure_kernel
-    disable_signing
+    prepare_source_tree
     apply_patches
     generate_source_package
     build_kernel
@@ -791,6 +777,8 @@ main() {
     upload_kernel
     #archive_config
     #cleanup_artifacts
+
 }
+
 
 main "$@"
