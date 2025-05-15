@@ -1,0 +1,32 @@
+services:
+  kernel-builder:
+    build: .
+    container_name: kernel-builder
+    volumes:
+      - ~/.ccache:/ccache
+      - ./build:/build
+      - ../kernel-configs:/config
+      - ./release:/release
+      - ./patches:/patches
+      - ./config.json:/usr/local/bin/config.json
+      - ~/kernel-deb/:/gitrepo
+    environment:
+      - TZ=Europe/Vienna
+    stdin_open: true
+    tty: true
+
+  shell:
+    build: .
+    volumes:
+      - ~/.ccache:/ccache
+      - ./build:/build
+      - ../kernel-configs:/config
+      - ./release:/release
+      - ./patches:/patches
+      - ./config.json:/usr/local/bin/config.json
+      - ~/kernel-deb/:/gitrepo
+    environment:
+      - TZ=Europe/Vienna
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/bash
