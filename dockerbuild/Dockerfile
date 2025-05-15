@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install LLVM using the apt script
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && \
     ./llvm.sh ${LLVM_VERSION} && rm llvm.sh && \
-    for bin in clang clang++ ld.lld; do \
+    for bin in clang clang++ ld.lld llvm-ar; do \
       update-alternatives --install /usr/bin/$bin $bin /usr/bin/${bin}-${LLVM_VERSION} 100; \
     done
 
