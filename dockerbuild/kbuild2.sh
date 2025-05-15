@@ -100,6 +100,7 @@ parse_args() {
             --upload-nexus) UPLOAD_NEXUS=true ;;
             --upload-pkgcloud|--upload-packagecloud) UPLOAD_PACKAGECLOUD=true ;;
             --publish) PUBLISH_ONLY=true ;;
+	    --menuconfig) MENUCONFIG=true ;;
             -h|--help) usage ;;
             [0-9]*.[0-9]*.[0-9]*) KERNEL_VERSION="$1" ;;
 			--clean|--cleanup) CLEAN_BUILD=true ;;
@@ -118,20 +119,21 @@ usage() {
     cat <<EOF
 Usage: $SCRIPT_NAME [version] [options]
 Options:
-  --clean			 Cleans the build directory
-  --llvm             Use LLVM/clang toolchain
-  --rt               Apply RT patches
-  --vm               Build a stripped-down VM kernel
-  --add-patches      Apply patches from configured patchdir
-  --upload-nexus     Upload built packages to Nexus
-  --upload-pkgcloud  Upload packages to Packagecloud
-  --publish          Only publish release to GitHub (no build)
-  -h, --help         Show this help
+  --clean                        Cleans the build directory
+  --llvm                         Use LLVM/clang toolchain
+  --rt                           Apply RT patches
+  --vm                           Build a stripped-down VM kernel
+  --add-patches                  Apply patches from configured patchdir
+  --upload-nexus                 Upload built packages to Nexus
+  --upload-pkgcloud              Upload packages to Packagecloud
+  --publish                      Only publish release to GitHub (no build)
+  --menuconfig                   Runs make menuconfig on a config
+  -h, --help                     Show this help
 
 Examples:
-  $SCRIPT_NAME                      # Builds latest vanilla kernel
-  $SCRIPT_NAME 6.9.3 --vm          # Builds stripped kernel for 6.9.3
-  $SCRIPT_NAME 6.9.3 --publish     # Only publish GitHub release
+  $SCRIPT_NAME                    # Builds latest vanilla kernel
+  $SCRIPT_NAME 6.9.3 --vm         # Builds stripped kernel for 6.9.3
+  $SCRIPT_NAME 6.9.3 --publish    # Only publish GitHub release
 EOF
     exit 0
 }
@@ -281,6 +283,51 @@ configure_kernel() {
     popd >/dev/null
 }
 
+prepare_source_tree() {
+    # Ensure we have a valid config loaded
+    parse_config
+
+    # Fetch the sources if not already fetched
+    fetch_sources
+
+    # Select and copy a baseline configuration
+    local config_variant="vanilla"
+    [[ "$USE_VM" == true ]] && config_variant="vm"
+    local config_source="${CONFIGDIR}/${config_variant}.config"
+    log "Copying baseline configuration from $config_source"
+    cp "$config_source" "${SOURCEDIR}/.config"
+
+    pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source directory: $SOURCEDIR"
+
+    # Apply optional adjustments based on build mode
+    apply_llvm_tweaks
+    apply_rt_tweaks
+    disable_signing
+
+    # Preconfigure the kernel; this applies any non-interactive changes
+    # that you want even before interactive tweaking.
+    configure_kernel
+
+    popd >/dev/null
+}
+
+run_menuconfig() {
+    # Prepare the source tree in a consistent way with the rest of the build system.
+    prepare_source_tree
+
+    pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source directory: $SOURCEDIR"
+
+    # Launch interactive menuconfig
+    log "Entering interactive menuconfig; adjust your kernel configuration and save changes when done."
+    make menuconfig
+    popd >/dev/null
+
+    # Archive the final configuration for future reproducibility.
+    archive_config
+
+    log "Menuconfig complete; updated configuration archived. Exiting."
+    exit 0
+}
 
 disable_signing() {
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR not set; cannot disable signing"
@@ -402,7 +449,7 @@ metapackage() {
     # Create a package directory for the current build
     local pkg_dir="${BUILDPATH}/${package_name}"
     mkdir -p "$pkg_dir" || fatal "Failed to create package directory: $pkg_dir"
-    
+
     local cfg_file="${pkg_dir}/${package_name}.cfg"
     log "Generating Debian meta-package config at: ${cfg_file}"
 
@@ -489,10 +536,10 @@ package_kernel() {
     # Construct the zip name using your schema: <flavor>_<version>[_llvm][_<custom>].zip
     local zipname="${flavor}-kernel_${KERNEL_VERSION}${llvm_tag}${custom_tag}.zip"
     log "Packaging .deb files into $zipname"
-    
+
     # Create a zip archive containing only the filtered .deb packages.
     zip -j "$RELEASEDIR/$zipname" "${debs[@]}" || fatal "Zip packaging failed"
-    
+
     # Generate a SHA-256 checksum for the zip file.
     local checksum_file="$RELEASEDIR/${zipname}.sha256sum"
     sha256sum "$RELEASEDIR/$zipname" > "$checksum_file" || fatal "Checksum generation failed"
@@ -699,7 +746,24 @@ main() {
     parse_config
     parse_args "$@"
 
-    # Handle version detection
+    if [[ "$MENUCONFIG" == true ]]; then
+        run_menuconfig
+        exit 0
+    fi
+
+    # Existing logic for publish, clean, etc...
+    if [[ "$PUBLISH_ONLY" == true ]]; then
+        release_to_github "$KERNEL_VERSION"
+        exit 0
+    fi
+
+    if [[ "$CLEAN_BUILD" == true ]]; then
+        log "Clean mode enabled. Purging build artifacts..."
+        cleanup_artifacts
+        exit 0
+    fi
+
+    # Continue with kernel build process
     if [[ -z "$KERNEL_VERSION" ]]; then
         log "No version specified, detecting latest stable version..."
         if ! KERNEL_VERSION=$(detect_latest_kernel 2>/dev/null); then
@@ -708,32 +772,19 @@ main() {
         log "Detected latest stable version: $KERNEL_VERSION"
     fi
 
-    if [[ "$PUBLISH_ONLY" == true ]]; then
-        release_to_github "$KERNEL_VERSION"
-        exit 0
-    fi
-
-	if [[ "$CLEAN_BUILD" == true ]]; then
-		log "Clean mode enabled via --clean. Purging build artifacts..."
-		cleanup_artifacts
-		exit 0
-	fi
-
-    # Now we can be sure KERNEL_VERSION is properly set
-    local major_version="${KERNEL_VERSION%%.*}"
-    log "Starting build for Linux kernel version: $KERNEL_VERSION (major version v${major_version}.x)"
-	log_environment
+    log "Starting build for Linux kernel version: $KERNEL_VERSION"
+    log_environment
     fetch_sources
     configure_kernel
-	disable_signing
+    disable_signing
     apply_patches
     generate_source_package
-	build_kernel
-	metapackage
+    build_kernel
+    metapackage
     package_kernel
     upload_kernel
-	#archive_config
-	#cleanup_artifacts
+    #archive_config
+    #cleanup_artifacts
 }
 
 main "$@"
