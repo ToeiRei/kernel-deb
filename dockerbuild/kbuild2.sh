@@ -274,8 +274,8 @@ configure_kernel() {
         make_opts+=( "LD=${LD}" )
     fi
 
-    make_opts+=("-j$(nproc)" "oldconfig")
-    log "Running make oldconfig with options: ${make_opts[*]}"
+    make_opts+=("-j$(nproc)" "olddefconfig")
+    log "Running make olddefconfig with options: ${make_opts[*]}"
     make "${make_opts[@]}"
 
     popd >/dev/null
