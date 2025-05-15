@@ -1,0 +1,4 @@
+machine my.apt.cache
+login user
+password secretpass
+

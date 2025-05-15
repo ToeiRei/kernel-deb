@@ -1,0 +1,10 @@
+# 
+
+# deb cdrom:[Debian GNU/Linux 8.7.1 _Jessie_ - Official amd64 NETINST Binary-1 20170116-10:57]/ jessie main
+
+# deb cdrom:[Debian GNU/Linux 8.7.1 _Jessie_ - Official amd64 NETINST Binary-1 20170116-10:57]/ jessie main
+
+deb https://my.apt.cache/repository/bookworm/ bookworm main contrib non-free non-free-firmware
+deb https://my.apt.cache/repository/bookworm/ bookworm-updates main contrib non-free non-free-firmware
+deb https://my.apt.cache/repository/bookworm-security/ bookworm-security main contrib non-free non-free-firmware
+
