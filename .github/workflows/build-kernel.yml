@@ -27,7 +27,6 @@ jobs:
       - name: Build Docker Image
         run: docker build -t kernel-builder .
 
-      # Option A: Using repository's kernel-configs directly as /config
       - name: Ensure required directories exist
         run: mkdir -p build release patches
 
@@ -43,8 +42,7 @@ jobs:
             -e RELEASEDIR=/release \
             -e PATCHDIR=/patches \
             -e MAINTAINER="GitHub Kernel Builder <ghkernel@stargazer.at>" \
-            -e HOMEPAGE="https://github.com/ToeiRei/kernel-deb"
-            -e LLVM=false \
+            -e LLVM=true \
             kernel-builder ${{ github.event.inputs.version }}
 
       - name: Upload Artifacts
@@ -52,3 +50,35 @@ jobs:
         with:
           name: kernel-release
           path: release/
+
+      - name: Create Draft Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "v${{ github.event.inputs.version }}"
+          release_name: "Kernel Release v${{ github.event.inputs.version }}"
+          draft: true
+          prerelease: false
+          body: |
+            This release includes the following packages:
+            
+            • linux-headers  
+            • linux-image  
+            • linux-libc-dev
+            
+            **Configurations:**
+            - **Vanilla:** The default configuration taken from a recent Debian kernel config and applied to the latest upstream kernel.
+            - **VM:** An optimized configuration for virtual environments (VMware, VirtualBox, Hyper-V, Xen, KVM) with unnecessary drivers removed.
+
+            **Automated Installation:**
+            For convenient installs, use our Packagecloud repository:
+            
+            ```bash
+            curl -s https://packagecloud.io/install/repositories/debian-kernels/buster/script.deb.sh | sudo bash
+            ```
+            
+            Then install the desired kernel packages using your package manager.
+            
+            Enjoy your new kernel!
