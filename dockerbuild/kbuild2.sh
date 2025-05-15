@@ -157,6 +157,7 @@ release_to_github() {
     git config user.name "$MAINTAINER_NAME"
     git config user.email "$MAINTAINER_EMAIL"
 
+    log "MAINTAINER is set to: ${MAINTAINER_NAME} <${MAINTAINER_EMAIL}>"
 
     git add .
     git commit -m "$version" || log "No changes to commit"
