@@ -750,10 +750,16 @@ main() {
     parse_args "$@"
 
     # Handle version detection
-    [[ -z "$KERNEL_VERSION" ]] && detect_latest_kernel
+    if [[ -z "$KERNEL_VERSION" ]]; then
+        log "No version specified, detecting latest stable version..."
+        if ! KERNEL_VERSION=$(detect_latest_kernel 2>/dev/null); then
+            fatal "Could not determine latest kernel version"
+        fi
+        log "Detected latest stable version: $KERNEL_VERSION"
+    fi
 
     # Command routing
-    if [[ "$MENUCONFIG" == true ]]; then
+    if [[ "${MENUCONFIG:-false}" == true ]]; then
         run_menuconfig
     elif [[ "$PUBLISH_ONLY" == true ]]; then
         release_to_github "$KERNEL_VERSION"
