@@ -1,0 +1,62 @@
+# Stage 1: Build Environment
+FROM debian:latest AS builder
+
+# Environment variables and noninteractive mode
+ENV CCACHEVER=4.11.3
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LLVM_VERSION=18
+
+# Use your local apt mirror and authentication config
+COPY sources.list /etc/apt/sources.list
+COPY stargazer.auth /etc/apt/auth.conf.d/stargazer
+
+# Initial update with cached mirror
+RUN apt -o "Acquire::https::Verify-Peer=false" update && \
+    apt -o "Acquire::https::Verify-Peer=false" install -y ca-certificates
+
+# Install all required dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    lsb-release wget gnupg2 curl jq xz-utils build-essential \
+    bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev \
+    dwarves bison cmake bash libzstd-dev libxxhash-dev rsync \
+    debhelper git ruby rubygems equivs zip software-properties-common && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install LLVM using the apt script
+RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && \
+    ./llvm.sh ${LLVM_VERSION} && rm llvm.sh && \
+    for bin in clang clang++ ld.lld; do \
+      update-alternatives --install /usr/bin/$bin $bin /usr/bin/${bin}-${LLVM_VERSION} 100; \
+    done
+
+# Build ccache from source
+RUN mkdir -p /tmp/ccache && cd /tmp/ccache && \
+    curl -L https://github.com/ccache/ccache/releases/download/v${CCACHEVER}/ccache-${CCACHEVER}.tar.gz | \
+      tar xz --strip-components=1 && \
+    mkdir build && cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DCMAKE_INSTALL_SYSCONFDIR=/etc \
+          -DREDIS_STORAGE_BACKEND=OFF .. && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /tmp/ccache
+
+# Install CLI tools (like gh) and any Ruby gems
+RUN gem install package_cloud && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
+      gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && apt-get install -y gh && \
+    rm -rf /var/lib/apt/lists/*
+
+# Prepare build environment directories
+RUN mkdir -p /build /config /release /patches
+
+# Copy your kernel build script (which compiles the kernel and packages it, outputting artifacts to /release)
+COPY kbuild2.sh /usr/local/bin/kbuild2
+RUN chmod +x /usr/local/bin/kbuild2
+
+# Set working directory for kernel build and run the build script
+WORKDIR /build
+
+ENTRYPOINT ["/usr/local/bin/kbuild2"]
