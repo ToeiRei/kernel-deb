@@ -1,14 +1,24 @@
 # Stage 1: Build Environment
 FROM debian:latest AS builder
 
+# Define a build argument to control local mirror usage.
+ARG USE_LOCAL_MIRROR=false
+
 # Environment variables and noninteractive mode
 ENV CCACHEVER=4.11.3
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LLVM_VERSION=18
 
-# Use your local apt mirror and authentication config
-COPY sources.list /etc/apt/sources.list
-COPY stargazer.auth /etc/apt/auth.conf.d/stargazer
+# Conditionally copy local apt mirror files if the build argument is set.
+# Since COPY doesn't support conditionals, we use a RUN block instead.
+# Make sure that sources.list and stargazer.auth are part of the build context (e.g., in dockerbuild/)
+RUN if [ "$USE_LOCAL_MIRROR" = "true" ]; then \
+      echo "Using local apt mirror configuration"; \
+      cp dockerbuild/sources.list /etc/apt/sources.list && \
+      cp dockerbuild/stargazer.auth /etc/apt/auth.conf.d/stargazer; \
+    else \
+      echo "Skipping local apt mirror configuration"; \
+    fi
 
 # Initial update with cached mirror
 RUN apt -o "Acquire::https::Verify-Peer=false" update && \
