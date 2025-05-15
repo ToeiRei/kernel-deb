@@ -312,6 +312,10 @@ prepare_source_tree() {
 }
 
 run_menuconfig() {
+    if [[ ! -t 0 ]]; then
+        fatal "Menuconfig requires an interactive terminal"
+    fi
+
     # Prepare the source tree in a consistent way with the rest of the build system.
     prepare_source_tree
 
