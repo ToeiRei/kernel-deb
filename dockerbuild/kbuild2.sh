@@ -150,8 +150,9 @@ release_to_github() {
 
     # Set temporary Git author identity for commits inside the container
     # Extract email and name from MAINTAINER variable
-    MAINTAINER_NAME=$(echo "$MAINTAINER" | sed -E 's/(.*) <.*>/\1/')
-    MAINTAINER_EMAIL=$(echo "$MAINTAINER" | sed -E 's/.* <(.*)>/\1/')
+    MAINTAINER_NAME="${MAINTAINER%% <*}"      # Remove everything after ' <'
+    MAINTAINER_EMAIL="${MAINTAINER##*<}"      # Keep only email
+    MAINTAINER_EMAIL="${MAINTAINER_EMAIL%>}"  # Remove trailing '>'
 
     # Set Git identity using extracted values
     git config user.name "$MAINTAINER_NAME"
@@ -170,6 +171,9 @@ release_to_github() {
     fi
 
     git push
+
+    export GH_TOKEN="${GH_TOKEN}"
+    gh auth status || fatal "GitHub authentication failed"
 
     local release_notes="${HOME}/release.md"
     if [[ ! -f "$release_notes" ]]; then
