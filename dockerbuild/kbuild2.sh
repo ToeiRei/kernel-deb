@@ -146,7 +146,7 @@ release_to_github() {
 
     log "Publishing kernel release $version to GitHub"
 
-    pushd "$CONFIGDIR/.." >/dev/null || fatal "Cannot change directory to Git repo"
+    pushd "/gitrepo" >/dev/null || fatal "Cannot change directory to Git repo"
 
     git add .
     git commit -m "$version" || log "No changes to commit"
@@ -183,7 +183,7 @@ EOF
     fi
 
     log "Attaching the following assets to release: ${assets[*]}"
-    gh release create "$version" -F "$release_notes" "${assets[@]}"
+    gh release create -d "$version" -F "$release_notes" "${assets[@]}"
 
     popd >/dev/null
 }
