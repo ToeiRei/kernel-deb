@@ -28,24 +28,41 @@ log() {
 parse_config() {
     command -v jq >/dev/null || fatal "jq is required but not found in PATH"
 
-    [[ -f "$CONFIG_FILE" ]] || fatal "Missing config file: $CONFIG_FILE"
+    if [[ -f "$CONFIG_FILE" ]]; then
+        BUILDPATH=$(jq -r '.buildpath' "$CONFIG_FILE")
+        CONFIGDIR=$(jq -r '.configdir' "$CONFIG_FILE")
+        RELEASEDIR=$(jq -r '.releasedir' "$CONFIG_FILE")
+        PATCHDIR=$(jq -r '.patchdir' "$CONFIG_FILE")
+        CCOPTS=$(jq -r '.ccopts // empty' "$CONFIG_FILE")
+        HOMEPAGE=$(jq -r '.homepage // empty' "$CONFIG_FILE")
+        MAINTAINER=$(jq -r '.maintainer // empty' "$CONFIG_FILE")
+        WGETPARMS=$(jq -r '.wgetparms // "-q"' "$CONFIG_FILE")
+        PACKAGECLOUD_DEB=$(jq -r '.packagecloud_deb // empty' "$CONFIG_FILE")
+        NEXUS_USER=$(jq -r '.nexus_user // empty' "$CONFIG_FILE")
+        NEXUS_PW=$(jq -r '.nexus_pass // empty' "$CONFIG_FILE")
+        NEXUS_REPO=$(jq -r '.nexus_repo // empty' "$CONFIG_FILE")
+        NTFY_URL=$(jq -r '.ntfy_url // empty' "$CONFIG_FILE")
+        LLVM=$(jq -r '.llvm // false' "$CONFIG_FILE")
+        LD=$(jq -r '.ld // empty' "$CONFIG_FILE")
+    else
+        echo "[WARN] $CONFIG_FILE not found, using environment variables (CI mode)"
 
-    BUILDPATH=$(jq -r '.buildpath' "$CONFIG_FILE")
-    CONFIGDIR=$(jq -r '.configdir' "$CONFIG_FILE")
-    RELEASEDIR=$(jq -r '.releasedir' "$CONFIG_FILE")
-    PATCHDIR=$(jq -r '.patchdir' "$CONFIG_FILE")
-    RSYNC_URI=$(jq -r '.rsync_uri // empty' "$CONFIG_FILE")
-    CCOPTS=$(jq -r '.ccopts // empty' "$CONFIG_FILE")
-    HOMEPAGE=$(jq -r '.homepage // empty' "$CONFIG_FILE")
-    MAINTAINER=$(jq -r '.maintainer // empty' "$CONFIG_FILE")
-    WGETPARMS=$(jq -r '.wgetparms // "-q"' "$CONFIG_FILE")
-    PACKAGECLOUD_DEB=$(jq -r '.packagecloud_deb // empty' "$CONFIG_FILE")
-    NEXUS_USER=$(jq -r '.nexus_user // empty' "$CONFIG_FILE")
-    NEXUS_PW=$(jq -r '.nexus_pass // empty' "$CONFIG_FILE")
-    NEXUS_REPO=$(jq -r '.nexus_repo // empty' "$CONFIG_FILE")
-    NTFY_URL=$(jq -r '.ntfy_url // empty' "$CONFIG_FILE")
-    LLVM=$(jq -r '.llvm // false' "$CONFIG_FILE")
-    LD=$(jq -r '.ld // empty' "$CONFIG_FILE")
+        BUILDPATH="${BUILDPATH:-/build}"
+        CONFIGDIR="${CONFIGDIR:-/config}"
+        RELEASEDIR="${RELEASEDIR:-/release}"
+        PATCHDIR="${PATCHDIR:-/patches}"
+        CCOPTS="${CCOPTS:-}"
+        HOMEPAGE="${HOMEPAGE:-https://example.com}"
+        MAINTAINER="${MAINTAINER:-GitHub Actions <gh@actions.local>}"
+        WGETPARMS="${WGETPARMS:--q}"
+        PACKAGECLOUD_DEB="${PACKAGECLOUD_DEB:-}"
+        NEXUS_USER="${NEXUS_USER:-}"
+        NEXUS_PW="${NEXUS_PW:-}"
+        NEXUS_REPO="${NEXUS_REPO:-}"
+        NTFY_URL="${NTFY_URL:-}"
+        LLVM="${LLVM:-false}"
+        LD="${LD:-}"
+    fi
 }
 
 # Kernel version logic
@@ -267,10 +284,10 @@ configure_kernel() {
 
 disable_signing() {
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR not set; cannot disable signing"
-    
+
     pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source directory: $SOURCEDIR"
     log "Disabling kernel signing to avoid build failures due to missing keys"
-    
+
     # Disable trusted keys & revocation keys. These disable any signing checks.
     if ! ./scripts/config --disable SYSTEM_TRUSTED_KEYS; then
         fatal "Failed to disable SYSTEM_TRUSTED_KEYS"
@@ -306,7 +323,7 @@ apply_patches() {
 
     for patch in "${patches[@]}"; do
         log "Preparing to apply patch: $patch"
-        
+
         # Optional dry-run check to see if patch is applicable
         if patch --dry-run -N -p1 < "$patch" > /dev/null 2>&1; then
             log "Dry-run successful, applying patch: $patch"
@@ -657,7 +674,7 @@ EOF
 
     # Move artifacts
     mkdir -p "$RELEASEDIR"
-	
+
     # Archive the source artifacts
     local archive_name="${package_name}_${KERNEL_VERSION}_${suffix}_source.zip"
     zip -j "$RELEASEDIR/$archive_name" ../${package_name}_${KERNEL_VERSION}* || fatal "Zip packaging failed"
@@ -669,7 +686,6 @@ EOF
     # Clean up raw source files
     rm -f ../${package_name}_${KERNEL_VERSION}*.dsc ../${package_name}_${KERNEL_VERSION}*.tar.*
 
-    
     popd >/dev/null # source dir
     popd >/dev/null # source parent dir
 
