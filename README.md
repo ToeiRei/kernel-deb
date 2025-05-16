@@ -47,3 +47,5 @@ Try [Alien](https://sourceforge.net/projects/alien-pkg-convert/) to convert pack
 ## Thanks!
 
 Huge shoutout to [packagecloud.io](https://packagecloud.io/) for hosting this repository – makes life so much easier!
+
+<a href="https://packagecloud.io/"><img height="46" width="158" alt="Private NPM registry and Maven, RPM, DEB, PyPi and RubyGem Repository · packagecloud" src="https://packagecloud.io/images/packagecloud-badge.png" /></a>
