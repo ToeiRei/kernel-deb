@@ -1,81 +1,49 @@
-# Recent vanilla Kernels for Debian based distributions
+# Recent Vanilla Kernels for Debian Based Distributions
 
 [![Generic badge](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/debian-kernels/buster)
 
+## Need a Newer Kernel, Fast?
 
-## Motivation
+Debian's solid, but sometimes you need something fresh under the hood.  This repo delivers recent vanilla Linux kernels for Debian distributions, pre-configured and ready to roll. No kernel builds, no messy deb shuffling – just get it done.
 
-For me, Debian is the obvious choice for a server. But sometimes I need a more
-recent kernel. As I am lazy, I do not want to build the kernel and shuffle 
-around the deb-files on my machines, so this is where this repo comes in.
+## How It Works
 
-## Kernel Configuration
+I start with the trusty Debian kernel configuration found in `/boot/config-*` and use `make oldconfig` with default values.  Then `make deb-pkg` handles packaging for a seamless install.
 
-I used the **Debian kernel** configuration found in /boot/config-* and imported 
-it using `make oldconfig` and used the default values offered.
+**Important:** These kernels are *not* signed (disabled signing options). 
 
-A linux kernel also knows `make deb-pkg` as a target, so packaging is done in 
-a breeze.
 
-Attention: This kernel is **NOT** signed.
+## What's Included?
 
-## [FAQs](https://toeirei.github.io/kernel-deb/faq/)
+* **Debian Kernel:** Fresh from the source, configured using the Debian template.
+* **VM Kernel:** Optimized for virtual machines with stripped drivers.
 
-## Debian Kernel from vanilla sources
+## Installation
 
-Kernel.org recent kernel sources with the trusty old debian config.
-
-Sources: 
-- https://kernel.org
-
-Latest sync with debian-kernel config: 2025-05-16
-
-Changes:
- - disabled signing (SYSTEM_TRUSTED_KEYS, SYSTEM_REVOCATION_KEYS, CONFIG_SYSTEM_TRUSTED_KEYS)
-
-## VM Kernel from vanilla sources
-
-Kernel.org recent kernel sources with debian config as a base, most of
-the drivers stripped and tuned to run on a VM
-
-Sources:
- - https://kernel.org
-
-Changes:
- - disabled signing (SYSTEM_TRUSTED_KEYS, SYSTEM_REVOCATION_KEYS, CONFIG_SYSTEM_TRUSTED_KEYS)
- - stripped drivers except for VirtIO, Xen, etc
- - set 'MQ Deadline' as the default IO Scheduler 
-
-# Installation
-
-## Debian 
+**Debian:**
 
 1. Add the repository:
-   ```
+   ```bash
    curl -s https://packagecloud.io/install/repositories/debian-kernels/buster/script.deb.sh | sudo bash
    ```
-
-2. Install the kernel
-   ```
+2. Install your chosen kernel: 
+   ```bash
    sudo apt update
    sudo apt install <kernel-flavor>
    ```
-   kernel-flavor can be any of vanilla-kernel, vm-kernel or gameserver-kernel
+   (Replace `<kernel-flavor>` with "vanilla-kernel" or "vm-kernel")
+
+**Other Debian Based Distributions:**
+
+1. Download the `.zip` files from the release page.
+2. Unzip and use `dpkg -i *.deb`. (Ubuntu also works fine!)
+
+**Non-Debian Packages:**
+
+Try [Alien](https://sourceforge.net/projects/alien-pkg-convert/) to convert packages.
 
 
-## Any other distro supporting debian packages
 
-1. Download the zip files from the release page
-2. Unzip the archive
-3. Use dpkg -i to install the packages (`dpkg -i *.deb` works fine on Ubuntu as well)
+## Thanks!
 
-## Non-DEB Package distros
-
-You may want to try the program [Alien](https://sourceforge.net/projects/alien-pkg-convert/) to convert the package to the format of your liking.
-(Example: `alien --to-rpm /path/to/file.deb`)
-If this doesn't work, you can convert the packages to be a tarball and unpack the kernel and modules into your system.
-
-# Sponsors
-A big thank you to https://packagecloud.io/ for providing me with repository hosting for those packages as it wouldn't be possible for me to host the repository on my line here.
-
-<a href="https://packagecloud.io/"><img height="46" width="158" alt="Private NPM registry and Maven, RPM, DEB, PyPi and RubyGem Repository · packagecloud" src="https://packagecloud.io/images/packagecloud-badge.png" /></a>
+Huge shoutout to [packagecloud.io](https://packagecloud.io/) for hosting this repository – makes life so much easier!
