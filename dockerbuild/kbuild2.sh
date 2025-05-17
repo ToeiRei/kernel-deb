@@ -189,9 +189,9 @@ config_diff() {
 
 enrich_diff_markdown() {
     local diff_file=$1
-    # Check that the diff file exists and is not empty
+    # Validate input
     if [[ ! -f "$diff_file" ]]; then
-        echo "* Diff file not found: $diff_file"
+        echo "* Diff file not found: $diff_file" >&2
         return 1
     fi
     if [[ ! -s "$diff_file" ]]; then
@@ -199,120 +199,154 @@ enrich_diff_markdown() {
         return 0
     fi
 
-    # Pattern definitions for filtering changes
+    # Enhanced pattern definitions
     local pahole_patterns="PAHOLE|BTF|DEBUG_INFO"
-    local version_patterns="VERSION|RELEASE"
-    local important_patterns="KVM|SECURITY|SELINUX|APPARMOR|MODULE|DRM|NET|SCHED|PCI|USB|VIRTIO"
+    local version_patterns="VERSION|RELEASE|GCC|CLANG|RUSTC|LLVM"
+    local important_patterns="KVM|SECURITY|SELINUX|APPARMOR|MODULE|DRM|NET|SCHED|PCI|USB|VIRTIO|MEMORY|CPU|ACPI|EFI"
+    local driver_patterns="_DRIVER|_HCD|_UDC|_HID|_INPUT|_TOUCHSCREEN|_WATCHDOG|_PHY|_GPIO"
 
-    # Categorize changes: added (lines starting with a single '+'),
-    # removed (lines starting with a single '-'), and options that were changed (appear as both).
-    local added
-    added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns" || true)
-    local removed
-    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)
-    local changed
-    changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
-              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}' || true)
+    # Safely extract changes with null handling
+    local added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns" || true)
+    local removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)
+    local changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
+                   awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}' || true)
 
-    # Special categories for further focus
-    local pahole_changes
-    pahole_changes=$(grep -E "$pahole_patterns" "$diff_file" || true)
-    local version_changes
-    version_changes=$(grep -E "$version_patterns" "$diff_file" || true)
-    local important_changes
-    important_changes=$(grep -E "$important_patterns" "$diff_file" || true)
+    # Special categories
+    local pahole_changes=$(grep -E "$pahole_patterns" "$diff_file" || true)
+    local version_changes=$(grep -E "$version_patterns" "$diff_file" || true)
+    local important_changes=$(grep -E "$important_patterns" "$diff_file" || true)
+    local driver_changes=$(grep -E "$driver_patterns" "$diff_file" || true)
 
-    # Generate counts from non-empty lines
-    local added_count
-    added_count=$(echo "$added" | grep -c '[^[:space:]]' || true)
-    local removed_count
-    removed_count=$(echo "$removed" | grep -c '[^[:space:]]' || true)
-    local changed_count
-    changed_count=$(echo "$changed" | grep -c '[^[:space:]]' || true)
-    local pahole_count
-    pahole_count=$(echo "$pahole_changes" | grep -c '[^[:space:]]' || true)
-    local version_count
-    version_count=$(echo "$version_changes" | grep -c '[^[:space:]]' || true)
-    local important_count
-    important_count=$(echo "$important_changes" | grep -c '[^[:space:]]' || true)
+    # Get counts safely
+    local added_count=$(echo "$added" | grep -c '[^[:space:]]' || true)
+    local removed_count=$(echo "$removed" | grep -c '[^[:space:]]' || true)
+    local changed_count=$(echo "$changed" | grep -c '[^[:space:]]' || true)
+    local pahole_count=$(echo "$pahole_changes" | grep -c '[^[:space:]]' || true)
+    local version_count=$(echo "$version_changes" | grep -c '[^[:space:]]' || true)
+    local important_count=$(echo "$important_changes" | grep -c '[^[:space:]]' || true)
+    local driver_count=$(echo "$driver_changes" | grep -c '[^[:space:]]' || true)
+    local total_changes=$(wc -l < "$diff_file")
 
-    local total_changes
-    total_changes=$(wc -l < "$diff_file")
+    # Major version jump detection
+    local is_major_jump=0
+    [[ $total_changes -gt 500 ]] && is_major_jump=1
 
-    # Start Markdown output
-    {
-      echo ""
-      echo "### Configuration Changes"
-      echo ""
-      echo "* **Total changes:** ${total_changes}"
-      echo "  - (+) ${added_count} added"
-      echo "  - (-) ${removed_count} removed"
-      echo "  - (~) ${changed_count} changed"
-      [ ${pahole_count} -gt 0 ] && echo "  - (⚙) ${pahole_count} pahole/BTF changes"
-      [ ${important_count} -gt 0 ] && echo "  - (⚠) ${important_count} important subsystem changes"
+    # Generate Markdown output
+    echo ""
+    echo "### Configuration Changes Analysis"
+    echo ""
+    echo "* **Total changes:** ${total_changes}"
+    echo "  - (+) ${added_count} added"
+    echo "  - (-) ${removed_count} removed"
+    echo "  - (~) ${changed_count} changed"
+    [[ $pahole_count -gt 0 ]] && echo "  - (⚙) ${pahole_count} debug/format changes"
+    [[ $important_count -gt 0 ]] && echo "  - (⚠) ${important_count} subsystem changes"
+    [[ $driver_count -gt 0 ]] && echo "  - (🚗) ${driver_count} driver changes"
 
-      # Section: BTF/Pahole changes
-      if [[ $pahole_count -gt 0 ]]; then
-          echo ""
-          echo "#### Debug/BPF Type Format (BTF) Changes"
-          echo ""
-          echo "$pahole_changes" | while IFS= read -r line; do
-              if [[ "$line" == +* ]]; then
-                  echo "* [+] ${line:1}"
-              elif [[ "$line" == -* ]]; then
-                  echo "* [-] ${line:1}"
-              else
-                  echo "* ${line}"
-              fi
-          done
-      fi
+    # Major version notice
+    [[ $is_major_jump -eq 1 ]] && {
+        echo ""
+        echo "> **Major Version Jump Detected**  "
+        echo "> This appears to be a significant version upgrade. Focus on subsystem changes below."
+    }
 
-      # Section: Important subsystem changes
-      if [[ $important_count -gt 0 ]]; then
-          echo ""
-          echo "#### Important Subsystem Changes"
-          echo ""
-          echo "$important_changes" | while IFS= read -r line; do
-              if [[ "$line" == +* ]]; then
-                  echo "* [+] ${line:1}"
-              elif [[ "$line" == -* ]]; then
-                  echo "* [-] ${line:1}"
-              else
-                  echo "* ${line}"
-              fi
-          done
-      fi
+    # Debug/Format changes
+    [[ $pahole_count -gt 0 ]] && {
+        echo ""
+        echo "#### Debug/Format Changes"
+        echo ""
+        echo "$pahole_changes" | while IFS= read -r line; do
+            [[ "$line" == +* ]] && echo "* [+] ${line:1}"
+            [[ "$line" == -* ]] && echo "* [-] ${line:1}"
+        done
+    }
 
-      # Section: Changed options
-      if [[ $changed_count -gt 0 ]]; then
-          echo ""
-          echo "#### Changed Options"
-          echo ""
-          for opt in $changed; do
-              # Extract the old and new values after the first '='.
-              local old_val
-              old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
-              local new_val
-              new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
-              # Fallback in case an option isn't assigned using "=".
-              [[ -z "$old_val" ]] && old_val="(not defined)"
-              [[ -z "$new_val" ]] && new_val="(not defined)"
-              echo "* [~] ${opt}=${old_val} → ${new_val}"
-          done
-      fi
+    # Important changes with smart collapsing
+    [[ $important_count -gt 0 ]] && {
+        echo ""
+        echo "#### Subsystem Changes"
+        echo ""
+        
+        if [[ $important_count -gt 15 ]]; then
+            echo "*Showing top 15 of ${important_count} changes*  "
+            echo ""
+            echo "$important_changes" | head -15 | while IFS= read -r line; do
+                [[ "$line" == +* ]] && echo "* [+] ${line:1}"
+                [[ "$line" == -* ]] && echo "* [-] ${line:1}"
+            done
+            echo ""
+            echo "<details>"
+            echo "<summary>Show all ${important_count} changes</summary>"
+            echo ""
+            echo "$important_changes" | while IFS= read -r line; do
+                [[ "$line" == +* ]] && echo "* [+] ${line:1}"
+                [[ "$line" == -* ]] && echo "* [-] ${line:1}"
+            done
+            echo "</details>"
+        else
+            echo "$important_changes" | while IFS= read -r line; do
+                [[ "$line" == +* ]] && echo "* [+] ${line:1}"
+                [[ "$line" == -* ]] && echo "* [-] ${line:1}"
+            done
+        fi
+    }
 
-      # Section: Version/Trivial Changes (limited to first 5 lines as a summary)
-      if [[ $version_count -gt 0 ]]; then
-          echo ""
-          echo "#### Version/Trivial Changes"
-          echo ""
-          echo "$version_changes" | head -5 | while IFS= read -r line; do
-              echo "* [↻] ${line:1}"
-          done
-          if [[ $version_count -gt 5 ]]; then
-              echo "* ... and $((version_count - 5)) more version changes"
-          fi
-      fi
+    # Driver changes (collapsed by default)
+    [[ $driver_count -gt 0 ]] && {
+        echo ""
+        echo "#### Driver Changes"
+        echo ""
+        echo "*${driver_count} driver-related changes detected*  "
+        echo ""
+        echo "<details>"
+        echo "<summary>Driver change details</summary>"
+        echo ""
+        echo "$driver_changes" | while IFS= read -r line; do
+            [[ "$line" == +* ]] && echo "* [+] ${line:1}"
+            [[ "$line" == -* ]] && echo "* [-] ${line:1}"
+        done
+        echo "</details>"
+    }
+
+    # Changed options
+    [[ $changed_count -gt 0 ]] && {
+        echo ""
+        echo "#### Changed Option Values"
+        echo ""
+        for opt in $changed; do
+            local old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
+            local new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
+            [[ -z "$old_val" ]] && old_val="(not set)"
+            [[ -z "$new_val" ]] && new_val="(not set)"
+            echo "* [~] ${opt}=${old_val} → ${new_val}"
+        done
+    }
+
+    # Version/trivial changes (collapsed if many)
+    [[ $version_count -gt 0 ]] && {
+        echo ""
+        echo "#### Version/Trivial Changes"
+        echo ""
+        
+        if [[ $version_count -gt 5 ]]; then
+            echo "*Showing 3 of ${version_count} changes*  "
+            echo ""
+            echo "$version_changes" | head -3 | while IFS= read -r line; do
+                echo "* [↻] ${line:1}"
+            done
+            echo ""
+            echo "<details>"
+            echo "<summary>Show all ${version_count} changes</summary>"
+            echo ""
+            echo "$version_changes" | while IFS= read -r line; do
+                echo "* [↻] ${line:1}"
+            done
+            echo "</details>"
+        else
+            echo "$version_changes" | while IFS= read -r line; do
+                echo "* [↻] ${line:1}"
+            done
+        fi
     }
 }
 
