@@ -1060,10 +1060,10 @@ run_standard_build() {
     log "Starting build for Linux $KERNEL_VERSION"
     log_environment
     prepare_source_tree
-    #apply_patches
-    #generate_source_package
-    #build_kernel
-    #metapackage
+    apply_patches
+    generate_source_package
+    build_kernel
+    metapackage
     package_kernel
     config_diff
     upload_kernel
