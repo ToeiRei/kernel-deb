@@ -19,10 +19,34 @@ SUFFIX=""
 
 # Utils
 fatal() { echo "[FATAL] $*" >&2; exit 1; }
+
+# Define numerical values for log levels.
+# Lower numbers imply less severity.
+declare -A LOG_LEVELS=(
+    [DEBUG]=0
+    [INFO]=1
+    [WARN]=2
+    [ERROR]=3
+)
+
+# Set a threshold to prevent ntfy from sending every log message.
+# For instance, only notify if severity is WARN (2) or above.
+DEFAULT_NOTIFY_LEVEL=${DEFAULT_NOTIFY_LEVEL:-1}
+
 log() {
-    echo "[INFO] $*"
-    [[ -n "$NTFY_URL" ]] && curl -s -H "Title: ${SCRIPT_NAME}" -d "$*" "$NTFY_URL" >/dev/null || true
+    local message="$1"
+    local level="${0:-DEBUG}"  # Default level is DEBUG if not provided.
+    local level_value=${LOG_LEVELS[$level]:-0}
+    
+    # Output to STDOUT with a prefix.
+    echo "[$level] $message"
+    
+    # If an ntfy URL is specified, only send if the message's level meets the threshold.
+    if [[ -n "$NTFY_URL" && $level_value -ge $DEFAULT_NOTIFY_LEVEL ]]; then
+        curl -s -H "Title: ${SCRIPT_NAME:-Script}" -d "$message" "$NTFY_URL" >/dev/null || true
+    fi
 }
+
 
 # Config loader
 parse_config() {
@@ -153,7 +177,10 @@ config_diff() {
     log "Generating kernel config differences for $config_variant..."
     ${SOURCEDIR}/scripts/diffconfig "$config_source" "$active_config" > "$RELEASEDIR/config_changes-${config_variant}.diff"
 
-    log "Config changes stored at $RELEASEDIR/config_changes.diff"
+    log "Config changes stored at $RELEASEDIR/config_changes-${config_variant}.diff"
+
+    enrich_diff_markdown "$RELEASEDIR/config_changes-${config_variant}.diff" > "$RELEASEDIR/config_changes-${config_variant}-enriched.md"
+    log "Enriched config changes stored at $RELEASEDIR/config_changes-${config_variant}-enriched.md"
 }
 
 enrich_diff_markdown() {
@@ -174,36 +201,36 @@ enrich_diff_markdown() {
     local important_patterns="KVM|SECURITY|SELINUX|APPARMOR|MODULE|DRM|NET|SCHED|PCI|USB|VIRTIO"
 
     # Categorize changes: added (lines starting with a single '+'),
-    # removed (single '-' lines), and options that were changed (appear as both added and removed).
+    # removed (lines starting with a single '-'), and options that were changed (appear as both).
     local added
-    added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns")
+    added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns" || true)
     local removed
-    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns")
+    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)
     local changed
     changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
-              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}')
+              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}' || true)
 
     # Special categories for further focus
     local pahole_changes
-    pahole_changes=$(grep -E "$pahole_patterns" "$diff_file")
+    pahole_changes=$(grep -E "$pahole_patterns" "$diff_file" || true)
     local version_changes
-    version_changes=$(grep -E "$version_patterns" "$diff_file")
+    version_changes=$(grep -E "$version_patterns" "$diff_file" || true)
     local important_changes
-    important_changes=$(grep -E "$important_patterns" "$diff_file")
+    important_changes=$(grep -E "$important_patterns" "$diff_file" || true)
 
     # Generate counts from non-empty lines
     local added_count
-    added_count=$(echo "$added" | grep -c '[^[:space:]]')
+    added_count=$(echo "$added" | grep -c '[^[:space:]]' || true)
     local removed_count
-    removed_count=$(echo "$removed" | grep -c '[^[:space:]]')
+    removed_count=$(echo "$removed" | grep -c '[^[:space:]]' || true)
     local changed_count
-    changed_count=$(echo "$changed" | grep -c '[^[:space:]]')
+    changed_count=$(echo "$changed" | grep -c '[^[:space:]]' || true)
     local pahole_count
-    pahole_count=$(echo "$pahole_changes" | grep -c '[^[:space:]]')
+    pahole_count=$(echo "$pahole_changes" | grep -c '[^[:space:]]' || true)
     local version_count
-    version_count=$(echo "$version_changes" | grep -c '[^[:space:]]')
+    version_count=$(echo "$version_changes" | grep -c '[^[:space:]]' || true)
     local important_count
-    important_count=$(echo "$important_changes" | grep -c '[^[:space:]]')
+    important_count=$(echo "$important_changes" | grep -c '[^[:space:]]' || true)
 
     local total_changes
     total_changes=$(wc -l < "$diff_file")
@@ -260,10 +287,10 @@ enrich_diff_markdown() {
           for opt in $changed; do
               # Extract the old and new values after the first '='.
               local old_val
-              old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2-)
+              old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
               local new_val
-              new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2-)
-              # Fallback in case an option isn't assigned using "=" (unlikely, but safe to cover)
+              new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
+              # Fallback in case an option isn't assigned using "=".
               [[ -z "$old_val" ]] && old_val="(not defined)"
               [[ -z "$new_val" ]] && new_val="(not defined)"
               echo "* [~] ${opt}=${old_val} → ${new_val}"
