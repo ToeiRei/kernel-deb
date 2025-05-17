@@ -1,67 +1,36 @@
 # Frequently Asked Questions
 
-# Kernel FAQs (shamelessly taken from the issues)
+## Kernel Issues:
 
-## The kernel does not (fully) boot.
-First of all: Do not panic. The kernel builds itself are tested and should run fine. In most cases this might be the linux-firmware package being too old. 
+* **My kernel isn't booting! Help!**  😱 First off, don't panic. Most likely, you need to update your firmware. Grab the latest from [https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git) or use this handy clone command:
 
-You can solve this by updating your firmware by either picking the files you need from https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git or if you prefer to do so, you can just replace it with a git clone by doing:
-
-```
+```bash
 apt install git
 cd /lib
 mv firmware firmware.old
 git clone  git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git firmware
 ```
 
-## How to revert to an older kernel
-The bootloader (usually GRUB) got you covered. Just select the older kernel when booting and remove my packages
 
-## Will the kernel boot on (insert hardware or hypervisor here)
-As I am using the Debian kernel config, the 'vanilla' or 'bare metal' kernels **should** boot anywhere the default debian kernel did run as I did not change drivers. For the 'vm' kernels, they have most of their drivers pulled to reduce their size. If it does not boot, take the 'vanilla' or 'bare metal' kernels, try again and report back please.
+* **How do I go back to my old kernel?** 🔙 Your bootloader (GRUB usually) has your back! Just pick the older kernel during boot, and then remove these packages.
 
-## Does this kernel work on Ubuntu?
-Yes, they do. Just keep in mind to grab the vanilla or gentoo-bm if you plan to run it on a physical machine
+* **Will this kernel work on [insert hardware or hypervisor]?** 🤔 Since we use the Debian kernel config, it *should* work anywhere the default Debian kernel ran – unless you've got something truly exotic. If in doubt, try the 'vanilla' kernel first and report back!
 
-## What is the difference between 'vm' and the other flavors?
-The 'vm' kernels are stripped down versions of the kernel. Drivers for many devices are removed to make it smaller whereas 'vanilla' and 'bm' drivers indicate that they include all drivers intended to run on physical machines (bare metal) but also include common VM drivers.
+* **Is this compatible with Ubuntu?** ✅ Yes, it is! Just grab the 'vanilla' kernel if you're running a physical machine.
 
-## Why 'buster' in the repo names?
-The project started with debian 10 and I didn't think that I would want to continue much further. Life prooved me otherwise.
+* **What's the difference between 'vm' and 'vanilla'?**  🧠 'Vanilla' kernels include all drivers for physical machines (and some common VM drivers). 'VM' kernels are stripped down for virtualized environments.
 
-# Project FAQs
+* **Why "buster" in the repo names?** 🤨 It started with Debian 10 ("Buster"), and I wasn't sure it would last this long!
 
-## How to request inclusion of drivers or config change
-If you have some shiny piece of hardware that is not yet supported by the 
-[kernel](https://kernel.org/) itself, you're out of luck as I do not write
-custom kernel modules. 
 
-But if your hardware is supported by upstream, file an [issue](https://github.com/ToeiRei/kernel-deb/issues/new/choose)
-stating the CONFIG_ option and I will see what I can do.
+## Project Stuff:
 
-## Architecture is only amd64
-I do not have the resources to build any other kernels on a foreign 
-architecture or cross-compile for some other architecture other than amd64 
-for now.
+* **Want to add a driver or change something?**  ✨ File an [issue](https://github.com/ToeiRei/kernel-deb/issues/new/choose) – make sure the driver is supported upstream in the kernel itself, though. I'm not writing custom modules.
+ 
+* **Why only AMD64?** 🤔 Resources are limited, so for now, it's just AMD64. If you need something else, consider sponsoring the project!
 
-## Use at your own risk
-This should be obvious, but you are responsible for your machine. Seriously.
-I assume no liability for the accuracy, correctness, completeness, or 
-usefulness of any information or package provided by this site nor for 
-any sort of damages using these may cause.
+* **Use at your own risk!**  ⚠️ This is common sense, but double-checking never hurts.
 
-## Where do I find sources?
-https://kernel.org provides the sources of the Linux Kernel I build here.
-Genpatches live at https://dev.gentoo.org/~mpagano/genpatches/
+* **Where can I find sources?** 💻 All the kernel goodies are at [https://kernel.org](https://kernel.org), and my config files are in [this directory](https://github.com/ToeiRei/kernel-deb/tree/main/kernel-configs).
 
-Any config I used to build the packages are [in this directory](https://github.com/ToeiRei/kernel-deb/tree/main/kernel-configs)
-and open to you to take a peek or use them for yourself.
-
-## The kernel does not work for me
-I do not know what you are trying to use the kernel for. If you want me to
-look at it, get in touch with me by opening an issue and I will see what I 
-can do - but no promises.
-
-## Custom Kernels
-I do not have the resources to build custom kernels for you only. In case
-you absolutely want me to do it, feel free to hire me or fund this project.
+* **The kernel doesn't work for me!** 🤯 Help me out by opening an issue – I need to know what you're trying to do!
