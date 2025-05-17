@@ -151,9 +151,138 @@ config_diff() {
     [[ ! -f "$config_source" || ! -f "$active_config" ]] && fatal "Missing config files for comparison."
 
     log "Generating kernel config differences for $config_variant..."
-    ${SOURCEDIR}/scripts/diffconfig "$config_source" "$active_config" > "$BUILDPATH/config_changes-${config_variant}.diff"
+    ${SOURCEDIR}/scripts/diffconfig "$config_source" "$active_config" > "$RELEASEDIR/config_changes-${config_variant}.diff"
 
-    log "Config changes stored at $BUILDPATH/config_changes.diff"
+    log "Config changes stored at $RELEASEDIR/config_changes.diff"
+}
+
+enrich_diff_markdown() {
+    local diff_file=$1
+    # Check that the diff file exists and is not empty
+    if [[ ! -f "$diff_file" ]]; then
+        echo "* Diff file not found: $diff_file"
+        return 1
+    fi
+    if [[ ! -s "$diff_file" ]]; then
+        echo "* No configuration changes detected"
+        return 0
+    fi
+
+    # Pattern definitions for filtering changes
+    local pahole_patterns="PAHOLE|BTF|DEBUG_INFO"
+    local version_patterns="VERSION|RELEASE"
+    local important_patterns="KVM|SECURITY|SELINUX|APPARMOR|MODULE|DRM|NET|SCHED|PCI|USB|VIRTIO"
+
+    # Categorize changes: added (lines starting with a single '+'),
+    # removed (single '-' lines), and options that were changed (appear as both added and removed).
+    local added
+    added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns")
+    local removed
+    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns")
+    local changed
+    changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
+              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}')
+
+    # Special categories for further focus
+    local pahole_changes
+    pahole_changes=$(grep -E "$pahole_patterns" "$diff_file")
+    local version_changes
+    version_changes=$(grep -E "$version_patterns" "$diff_file")
+    local important_changes
+    important_changes=$(grep -E "$important_patterns" "$diff_file")
+
+    # Generate counts from non-empty lines
+    local added_count
+    added_count=$(echo "$added" | grep -c '[^[:space:]]')
+    local removed_count
+    removed_count=$(echo "$removed" | grep -c '[^[:space:]]')
+    local changed_count
+    changed_count=$(echo "$changed" | grep -c '[^[:space:]]')
+    local pahole_count
+    pahole_count=$(echo "$pahole_changes" | grep -c '[^[:space:]]')
+    local version_count
+    version_count=$(echo "$version_changes" | grep -c '[^[:space:]]')
+    local important_count
+    important_count=$(echo "$important_changes" | grep -c '[^[:space:]]')
+
+    local total_changes
+    total_changes=$(wc -l < "$diff_file")
+
+    # Start Markdown output
+    {
+      echo ""
+      echo "### Configuration Changes"
+      echo ""
+      echo "* **Total changes:** ${total_changes}"
+      echo "  - (+) ${added_count} added"
+      echo "  - (-) ${removed_count} removed"
+      echo "  - (~) ${changed_count} changed"
+      [ ${pahole_count} -gt 0 ] && echo "  - (⚙) ${pahole_count} pahole/BTF changes"
+      [ ${important_count} -gt 0 ] && echo "  - (⚠) ${important_count} important subsystem changes"
+
+      # Section: BTF/Pahole changes
+      if [[ $pahole_count -gt 0 ]]; then
+          echo ""
+          echo "#### Debug/BPF Type Format (BTF) Changes"
+          echo ""
+          echo "$pahole_changes" | while IFS= read -r line; do
+              if [[ "$line" == +* ]]; then
+                  echo "* [+] ${line:1}"
+              elif [[ "$line" == -* ]]; then
+                  echo "* [-] ${line:1}"
+              else
+                  echo "* ${line}"
+              fi
+          done
+      fi
+
+      # Section: Important subsystem changes
+      if [[ $important_count -gt 0 ]]; then
+          echo ""
+          echo "#### Important Subsystem Changes"
+          echo ""
+          echo "$important_changes" | while IFS= read -r line; do
+              if [[ "$line" == +* ]]; then
+                  echo "* [+] ${line:1}"
+              elif [[ "$line" == -* ]]; then
+                  echo "* [-] ${line:1}"
+              else
+                  echo "* ${line}"
+              fi
+          done
+      fi
+
+      # Section: Changed options
+      if [[ $changed_count -gt 0 ]]; then
+          echo ""
+          echo "#### Changed Options"
+          echo ""
+          for opt in $changed; do
+              # Extract the old and new values after the first '='.
+              local old_val
+              old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2-)
+              local new_val
+              new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2-)
+              # Fallback in case an option isn't assigned using "=" (unlikely, but safe to cover)
+              [[ -z "$old_val" ]] && old_val="(not defined)"
+              [[ -z "$new_val" ]] && new_val="(not defined)"
+              echo "* [~] ${opt}=${old_val} → ${new_val}"
+          done
+      fi
+
+      # Section: Version/Trivial Changes (limited to first 5 lines as a summary)
+      if [[ $version_count -gt 0 ]]; then
+          echo ""
+          echo "#### Version/Trivial Changes"
+          echo ""
+          echo "$version_changes" | head -5 | while IFS= read -r line; do
+              echo "* [↻] ${line:1}"
+          done
+          if [[ $version_count -gt 5 ]]; then
+              echo "* ... and $((version_count - 5)) more version changes"
+          fi
+      fi
+    }
 }
 
 
@@ -175,8 +304,8 @@ release_to_github() {
     # Set temporary Git author identity for commits inside the container
     # Extract email and name from MAINTAINER variable
     MAINTAINER_NAME="${MAINTAINER%% <*}"      # Remove everything after ' <'
-    MAINTAINER_EMAIL="${MAINTAINER##*<}"      # Keep only email
-    MAINTAINER_EMAIL="${MAINTAINER_EMAIL%>}"  # Remove trailing '>'
+    MAINTAINER_EMAIL="${MAINTAINER##*<}"        # Keep only email
+    MAINTAINER_EMAIL="${MAINTAINER_EMAIL%>}"     # Remove trailing '>'
 
     # Set Git identity using extracted values
     git config user.name "$MAINTAINER_NAME"
@@ -184,7 +313,7 @@ release_to_github() {
 
     log "MAINTAINER is set to: ${MAINTAINER_NAME} <${MAINTAINER_EMAIL}>"
 
-    # git add .
+    # Commit any local changes (assumed to be benign or fixed by your script)
     git commit -m "$version" || log "No changes to commit"
 
     if git rev-parse "$version" >/dev/null 2>&1; then
@@ -222,8 +351,28 @@ Source code is included as a ZIP archive (quilt format)
 
 Built with a mildly cursed Bash script.
 EOF
+        # Add a dash of attitude!
+        echo "" >> "$release_notes"
+        echo "PS: We’ve taken the liberty of summarizing the configuration diff—because transparency is our middle name." >> "$release_notes"
     fi
 
+    # Optionally, if you have a config variant defined and a diff file exists,
+    # enrich it and append to the release notes.
+    if [[ -n "$config_variant" ]]; then
+        local diff_file="$RELEASEDIR/config_changes-${config_variant}.diff"
+        if [[ -f "$diff_file" && -s "$diff_file" ]]; then
+            log "Enriching configuration diff for variant '$config_variant'"
+            # Call your enrichment function and capture its output
+            local enriched_diff
+            enriched_diff=$(enrich_diff_markdown "$diff_file")
+            echo "" >> "$release_notes"
+            echo "### Enriched Configuration Changes for ${config_variant}" >> "$release_notes"
+            echo "" >> "$release_notes"
+            echo "$enriched_diff" >> "$release_notes"
+        else
+            log "No config diff found for variant '$config_variant'; skipping enrichment."
+        fi
+    fi
 
     # Collect all relevant release files
     mapfile -t assets < <(find "$RELEASEDIR" -type f \( -name "*${version}*.zip" -o -name "*${version}*.zip.sha256sum" \))
