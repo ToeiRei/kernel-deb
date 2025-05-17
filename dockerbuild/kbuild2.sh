@@ -857,7 +857,7 @@ log_environment() {
     log $"Build Environment:
 Kernel: ${KERNEL_VERSION} | CPUs: $(nproc) | Mem: $(free -h | awk '/Mem:/{print $2}')
 Toolchain: $(gcc --version | head -n1) | CC: ${CCOPTS:-system default}
-Options: LLVM=$USE_LLVM, RT=$USE_RT, VM=$USE_VM, PATCHES=$ADD_PATCHES, UPLOAD_NEXUS=$UPLOAD_NEXUS, UPLOAD_PACKAGECLOUD=$UPLOAD_PACKAGECLOUD"
+Options: LLVM=$USE_LLVM, RT=$USE_RT, VM=$USE_VM, PATCHES=$ADD_PATCHES, UPLOAD_NEXUS=$UPLOAD_NEXUS, UPLOAD_PACKAGECLOUD=$UPLOAD_PACKAGECLOUD" "INFO"
 }
 
 archive_config() {
