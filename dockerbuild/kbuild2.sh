@@ -168,23 +168,39 @@ EOF
 }
 
 config_diff() {
+    # Determine the configuration variant based on flags
     local config_variant="vanilla"
-    [[ "$USE_VM" == true ]] && config_variant="vm"
-    [[ "$USE_RT" == true ]] && config_variant="rt"
+    if [[ "$USE_VM" == true ]]; then
+        config_variant="vm"
+    elif [[ "$USE_RT" == true ]]; then
+        config_variant="rt"
+    fi
 
+    # Define the baseline and active config file paths
     local config_source="${CONFIGDIR}/${config_variant}.config"
     local active_config="${SOURCEDIR}/.config"
 
-    [[ ! -f "$config_source" || ! -f "$active_config" ]] && fatal "Missing config files for comparison."
+    # Validate that the necessary config files exist
+    [[ ! -f "$config_source" ]] && fatal "Missing baseline kernel config: $config_source"
+    [[ ! -f "$active_config" ]] && fatal "Missing active kernel config: $active_config"
 
-    log "Generating kernel config differences for $config_variant..."
-    ${SOURCEDIR}/scripts/diffconfig "$config_source" "$active_config" > "$RELEASEDIR/config_changes-${config_variant}.diff"
+    # Ensure that the diffconfig tool exists and is executable
+    if [[ ! -x "${SOURCEDIR}/scripts/diffconfig" ]]; then
+        fatal "diffconfig tool not found or not executable at ${SOURCEDIR}/scripts/diffconfig"
+    fi
 
+    # Ensure the release directory exists
+    mkdir -p "$RELEASEDIR"
+
+    log "Generating kernel config differences for '$config_variant'..."
+    "${SOURCEDIR}/scripts/diffconfig" "$config_source" "$active_config" > "$RELEASEDIR/config_changes-${config_variant}.diff"
     log "Config changes stored at $RELEASEDIR/config_changes-${config_variant}.diff"
 
+    # Enhance the diff output with markdown formatting for GitHub release notes
     enrich_diff_markdown "$RELEASEDIR/config_changes-${config_variant}.diff" > "$RELEASEDIR/config_changes-${config_variant}-enriched.md"
     log "Enriched config changes stored at $RELEASEDIR/config_changes-${config_variant}-enriched.md"
 }
+
 
 enrich_diff_markdown() {
     local diff_file=$1
@@ -198,39 +214,35 @@ enrich_diff_markdown() {
         return 0
     fi
 
-    # Enhanced pattern definitions
     local pahole_patterns="PAHOLE|BTF|DEBUG_INFO"
     local version_patterns="VERSION|RELEASE|GCC|CLANG|RUSTC|LLVM"
     local important_patterns="KVM|SECURITY|SELINUX|APPARMOR|MODULE|DRM|NET|SCHED|PCI|USB|VIRTIO|MEMORY|CPU|ACPI|EFI"
     local driver_patterns="_DRIVER|_HCD|_UDC|_HID|_INPUT|_TOUCHSCREEN|_WATCHDOG|_PHY|_GPIO"
 
-    # Safely extract changes with null handling
-    local added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns" || true)
-    local removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)
-    local changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
-                   awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}' || true)
+    local added removed changed pahole_changes version_changes important_changes driver_changes
+    added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns" || true)
+    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)
+    changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
+              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}' || true)
 
-    # Special categories
-    local pahole_changes=$(grep -E "$pahole_patterns" "$diff_file" || true)
-    local version_changes=$(grep -E "$version_patterns" "$diff_file" || true)
-    local important_changes=$(grep -E "$important_patterns" "$diff_file" || true)
-    local driver_changes=$(grep -E "$driver_patterns" "$diff_file" || true)
+    pahole_changes=$(grep -E "$pahole_patterns" "$diff_file" || true)
+    version_changes=$(grep -E "$version_patterns" "$diff_file" || true)
+    important_changes=$(grep -E "$important_patterns" "$diff_file" || true)
+    driver_changes=$(grep -E "$driver_patterns" "$diff_file" || true)
 
-    # Get counts safely
-    local added_count=$(echo "$added" | grep -c '[^[:space:]]' || true)
-    local removed_count=$(echo "$removed" | grep -c '[^[:space:]]' || true)
-    local changed_count=$(echo "$changed" | grep -c '[^[:space:]]' || true)
-    local pahole_count=$(echo "$pahole_changes" | grep -c '[^[:space:]]' || true)
-    local version_count=$(echo "$version_changes" | grep -c '[^[:space:]]' || true)
-    local important_count=$(echo "$important_changes" | grep -c '[^[:space:]]' || true)
-    local driver_count=$(echo "$driver_changes" | grep -c '[^[:space:]]' || true)
-    local total_changes=$(wc -l < "$diff_file")
+    local added_count removed_count changed_count pahole_count version_count important_count driver_count total_changes
+    added_count=$(echo "$added" | grep -c '[^[:space:]]' || true)
+    removed_count=$(echo "$removed" | grep -c '[^[:space:]]' || true)
+    changed_count=$(echo "$changed" | grep -c '[^[:space:]]' || true)
+    pahole_count=$(echo "$pahole_changes" | grep -c '[^[:space:]]' || true)
+    version_count=$(echo "$version_changes" | grep -c '[^[:space:]]' || true)
+    important_count=$(echo "$important_changes" | grep -c '[^[:space:]]' || true)
+    driver_count=$(echo "$driver_changes" | grep -c '[^[:space:]]' || true)
+    total_changes=$(wc -l < "$diff_file")
 
-    # Major version jump detection
     local is_major_jump=0
     [[ $total_changes -gt 500 ]] && is_major_jump=1
 
-    # Generate Markdown output
     echo ""
     echo "### Configuration Changes Analysis"
     echo ""
@@ -242,55 +254,50 @@ enrich_diff_markdown() {
     [[ $important_count -gt 0 ]] && echo "  - (⚠) ${important_count} subsystem changes"
     [[ $driver_count -gt 0 ]] && echo "  - (🚗) ${driver_count} driver changes"
 
-    # Major version notice
     [[ $is_major_jump -eq 1 ]] && {
         echo ""
         echo "> **Major Version Jump Detected**  "
         echo "> This appears to be a significant version upgrade. Focus on subsystem changes below."
     }
 
-    # Debug/Format changes
     [[ $pahole_count -gt 0 ]] && {
         echo ""
         echo "#### Debug/Format Changes"
         echo ""
-        echo "$pahole_changes" | while IFS= read -r line; do
+        while IFS= read -r line; do
             [[ "$line" == +* ]] && echo "* [+] ${line:1}"
             [[ "$line" == -* ]] && echo "* [-] ${line:1}"
-        done
+        done <<< "$pahole_changes"
     }
 
-    # Important changes with smart collapsing
     [[ $important_count -gt 0 ]] && {
         echo ""
         echo "#### Subsystem Changes"
         echo ""
-        
         if [[ $important_count -gt 15 ]]; then
             echo "*Showing top 15 of ${important_count} changes*  "
             echo ""
-            echo "$important_changes" | head -15 | while IFS= read -r line; do
+            while IFS= read -r line; do
                 [[ "$line" == +* ]] && echo "* [+] ${line:1}"
                 [[ "$line" == -* ]] && echo "* [-] ${line:1}"
-            done
+            done <<< "$(echo "$important_changes" | head -15)"
             echo ""
             echo "<details>"
             echo "<summary>Show all ${important_count} changes</summary>"
             echo ""
-            echo "$important_changes" | while IFS= read -r line; do
+            while IFS= read -r line; do
                 [[ "$line" == +* ]] && echo "* [+] ${line:1}"
                 [[ "$line" == -* ]] && echo "* [-] ${line:1}"
-            done
+            done <<< "$important_changes"
             echo "</details>"
         else
-            echo "$important_changes" | while IFS= read -r line; do
+            while IFS= read -r line; do
                 [[ "$line" == +* ]] && echo "* [+] ${line:1}"
                 [[ "$line" == -* ]] && echo "* [-] ${line:1}"
-            done
+            done <<< "$important_changes"
         fi
     }
 
-    # Driver changes (collapsed by default)
     [[ $driver_count -gt 0 ]] && {
         echo ""
         echo "#### Driver Changes"
@@ -300,54 +307,53 @@ enrich_diff_markdown() {
         echo "<details>"
         echo "<summary>Driver change details</summary>"
         echo ""
-        echo "$driver_changes" | while IFS= read -r line; do
+        while IFS= read -r line; do
             [[ "$line" == +* ]] && echo "* [+] ${line:1}"
             [[ "$line" == -* ]] && echo "* [-] ${line:1}"
-        done
+        done <<< "$driver_changes"
         echo "</details>"
     }
 
-    # Changed options
     [[ $changed_count -gt 0 ]] && {
         echo ""
         echo "#### Changed Option Values"
         echo ""
         for opt in $changed; do
-            local old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
-            local new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
+            local old_val new_val
+            old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
+            new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
             [[ -z "$old_val" ]] && old_val="(not set)"
             [[ -z "$new_val" ]] && new_val="(not set)"
             echo "* [~] ${opt}=${old_val} → ${new_val}"
         done
     }
 
-    # Version/trivial changes (collapsed if many)
     [[ $version_count -gt 0 ]] && {
         echo ""
         echo "#### Version/Trivial Changes"
         echo ""
-        
         if [[ $version_count -gt 5 ]]; then
             echo "*Showing 3 of ${version_count} changes*  "
             echo ""
-            echo "$version_changes" | head -3 | while IFS= read -r line; do
+            while IFS= read -r line; do
                 echo "* [↻] ${line:1}"
-            done
+            done <<< "$(echo "$version_changes" | head -3)"
             echo ""
             echo "<details>"
             echo "<summary>Show all ${version_count} changes</summary>"
             echo ""
-            echo "$version_changes" | while IFS= read -r line; do
+            while IFS= read -r line; do
                 echo "* [↻] ${line:1}"
-            done
+            done <<< "$version_changes"
             echo "</details>"
         else
-            echo "$version_changes" | while IFS= read -r line; do
+            while IFS= read -r line; do
                 echo "* [↻] ${line:1}"
-            done
+            done <<< "$version_changes"
         fi
     }
 }
+
 
 
 release_to_github() {
@@ -1054,10 +1060,10 @@ run_standard_build() {
     log "Starting build for Linux $KERNEL_VERSION"
     log_environment
     prepare_source_tree
-    apply_patches
-    generate_source_package
-    build_kernel
-    metapackage
+    #apply_patches
+    #generate_source_package
+    #build_kernel
+    #metapackage
     package_kernel
     config_diff
     upload_kernel
