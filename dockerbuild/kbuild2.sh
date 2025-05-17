@@ -415,6 +415,7 @@ EOF
     log "Attaching the following assets to release: ${assets[*]}"
     gh release create -d "$version" -F "$release_notes" "${assets[@]}"
 
+    log "Release $version published to GitHub" "INFO"
     popd >/dev/null
 }
 
@@ -976,6 +977,10 @@ EOF
 
 
 main() {
+    # Capture the start time
+    local start_time
+    start_time=$(date +%s)
+
     parse_config
     parse_args "$@"
 
@@ -998,6 +1003,17 @@ main() {
     else
         run_standard_build
     fi
+
+    # Calculate and log build duration in HH:MM:SS format
+    local end_time elapsed hours minutes seconds elapsed_formatted
+    end_time=$(date +%s)
+    elapsed=$(( end_time - start_time ))
+    hours=$(( elapsed / 3600 ))
+    minutes=$(( (elapsed % 3600) / 60 ))
+    seconds=$(( elapsed % 60 ))
+    elapsed_formatted=$(printf '%02d:%02d:%02d' "$hours" "$minutes" "$seconds")
+    log "Build completed successfully in ${elapsed_formatted} (HH:MM:SS)." "INFO"
+
     exit 0
 }
 
