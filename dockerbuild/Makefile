@@ -3,9 +3,12 @@ DOCKER_COMPOSE = COMPOSE_BAKE=true docker compose
 SERVICE = kernel-builder
 SHELL_SERVICE = shell
 ARGS ?=
+IMAGE_NAME = dockerbuild-kernel-builder
+LOCAL_KBUILD = kbuild2.sh
+IMAGE_KBUILD = /usr/local/bin/kbuild2
 
 # Phony targets
-.PHONY: help all default vanilla vm build run shell publish clean mrproper stop logs menuconfig
+.PHONY: help all default vanilla vm build run shell publish clean mrproper stop logs menuconfig check-image
 
 .DEFAULT_GOAL := default
 
@@ -20,24 +23,24 @@ all: run  ## Alias for 'run' target
 
 ##@ Build Targets
 
-vanilla:  ## Build vanilla kernel
+vanilla: check-image  ## Build vanilla kernel
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
 
-vm:  ## Build VM kernel
+vm: check-image  ## Build VM kernel
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS) --vm
 
 build:  ## Build Docker image with local mirror support
 	$(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true
 
-run:  ## Run kernel build with optional args
+run: check-image  ## Run kernel build with optional args
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
 
-menuconfig:  ## Launch kernel menuconfig
+menuconfig: check-image  ## Launch kernel menuconfig
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) --menuconfig $(ARGS)
 
 ##@ Development / Debugging
 
-shell:  ## Start interactive shell in container
+shell: check-image  ## Start interactive shell in container
 	$(DOCKER_COMPOSE) run --rm --entrypoint /bin/bash $(SHELL_SERVICE)
 
 logs:  ## View container logs
@@ -45,7 +48,7 @@ logs:  ## View container logs
 
 ##@ Release
 
-publish:  ## Publish release to GitHub
+publish: check-image  ## Publish release to GitHub
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) --publish
 
 ##@ Cleanup
@@ -59,3 +62,22 @@ mrproper: clean stop  ## Full cleanup including Docker and ccache
 
 stop:  ## Stop and remove containers
 	$(DOCKER_COMPOSE) down
+
+##@ Internals
+
+check-image:  ## Ensure Docker image is up-to-date with kbuild2.sh
+	@echo "🔍 Verifying Docker image '${IMAGE_NAME}' is current..."
+	@if ! docker image inspect ${IMAGE_NAME} >/dev/null 2>&1; then \
+		echo "⚠️  Image '${IMAGE_NAME}' not found. Triggering build..."; \
+		$(MAKE) build; \
+	else \
+		LOCAL_SUM=$$(sha256sum ${LOCAL_KBUILD} | awk '{print $$1}'); \
+		IMAGE_SUM=$$(docker run --rm --entrypoint sha256sum ${IMAGE_NAME} ${IMAGE_KBUILD} | awk '{print $$1}'); \
+		if [ "$$LOCAL_SUM" != "$$IMAGE_SUM" ]; then \
+			echo "⚠️  kbuild2.sh mismatch. Rebuilding image..."; \
+			$(MAKE) build; \
+		else \
+			echo "✅ Docker image is up-to-date."; \
+		fi \
+	fi
+
