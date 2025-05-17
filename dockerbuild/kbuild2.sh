@@ -18,7 +18,11 @@ CLEAN_BUILD=false
 SUFFIX=""
 
 # Utils
-fatal() { echo "[FATAL] $*" >&2; exit 1; }
+fatal() {
+    echo "[FATAL] $*" >&2
+    log "$*" "FATAL"
+    exit 1
+}
 
 # Define numerical values for log levels.
 # Lower numbers imply less severity.
