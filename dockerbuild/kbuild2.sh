@@ -800,7 +800,7 @@ upload_kernel() {
                 log "Skipping debug package: $pkg for Packagecloud"
                 continue
             fi
-            log "Uploading $pkg to Packagecloud"
+            log "Uploading $pkg to Packagecloud" "INFO"
             package_cloud push "$PACKAGECLOUD_DEB" "$pkg"
             # Optional: If you have a second Packagecloud repository, push there too.
             if [[ -n "${PACKAGECLOUD_DEB2:-}" ]]; then
@@ -812,7 +812,7 @@ upload_kernel() {
     if [[ "$UPLOAD_NEXUS" == true ]]; then
          [[ -z "$NEXUS_USER" || -z "$NEXUS_PW" || -z "$NEXUS_REPO" ]] && fatal "Nexus credentials or repo not configured"
          for pkg in "${debs[@]}"; do
-            log "Uploading $pkg to Nexus"
+            log "Uploading $pkg to Nexus" "INFO"
 			curl -u "${NEXUS_USER}:${NEXUS_PW}" -H "Content-Type: multipart/form-data" --data-binary "@${pkg}" "${NEXUS_REPO}"
          done
     fi
