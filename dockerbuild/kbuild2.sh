@@ -39,18 +39,17 @@ DEFAULT_NOTIFY_LEVEL=${DEFAULT_NOTIFY_LEVEL:-1}
 
 log() {
     local message="$1"
-    local level="${0:-DEBUG}"  # Default level is DEBUG if not provided.
+    local level="${2:-DEBUG}"  # Default to DEBUG if no level is provided
     local level_value=${LOG_LEVELS[$level]:-0}
     
-    # Output to STDOUT with a prefix.
+    # Print log message to stdout with a level prefix
     echo "[$level] $message"
     
-    # If an ntfy URL is specified, only send if the message's level meets the threshold.
+    # Only send an ntfy notification if the level meets or exceeds DEFAULT_NOTIFY_LEVEL
     if [[ -n "$NTFY_URL" && $level_value -ge $DEFAULT_NOTIFY_LEVEL ]]; then
         curl -s -H "Title: ${SCRIPT_NAME:-Script}" -d "$message" "$NTFY_URL" >/dev/null || true
     fi
 }
-
 
 # Config loader
 parse_config() {
