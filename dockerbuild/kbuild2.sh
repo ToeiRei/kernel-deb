@@ -141,13 +141,17 @@ EOF
 }
 
 config_diff() {
-    local flavor_config="${CONFIGDIR}/${flavor}.config"
+    local config_variant="vanilla"
+    [[ "$USE_VM" == true ]] && config_variant="vm"
+    [[ "$USE_RT" == true ]] && config_variant="rt"
+
+    local config_source="${CONFIGDIR}/${config_variant}.config"
     local active_config="${SOURCEDIR}/.config"
 
-    [[ ! -f "$flavor_config" || ! -f "$active_config" ]] && fatal "Missing config files for comparison."
+    [[ ! -f "$config_source" || ! -f "$active_config" ]] && fatal "Missing config files for comparison."
 
-    log "Generating kernel config differences..."
-    diff -u "$flavor_config" "$active_config" > "$BUILDPATH/config_changes.diff"
+    log "Generating kernel config differences for $config_variant..."
+    diff -u "$config_source" "$active_config" > "$BUILDPATH/config_changes.diff"
 
     log "Config changes stored at $BUILDPATH/config_changes.diff"
 }
