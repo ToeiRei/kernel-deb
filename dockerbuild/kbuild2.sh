@@ -151,7 +151,7 @@ config_diff() {
     [[ ! -f "$config_source" || ! -f "$active_config" ]] && fatal "Missing config files for comparison."
 
     log "Generating kernel config differences for $config_variant..."
-    diff -u "$config_source" "$active_config" > "$BUILDPATH/config_changes.diff"
+    ${SOURCEDIR}/scripts/diffconfig "$config_source" "$active_config" > "$BUILDPATH/config_changes-${config_variant}.diff"
 
     log "Config changes stored at $BUILDPATH/config_changes.diff"
 }
