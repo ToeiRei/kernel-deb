@@ -140,6 +140,19 @@ EOF
     exit 0
 }
 
+config_diff() {
+    local flavor_config="${CONFIGDIR}/${flavor}.config"
+    local active_config="${SOURCEDIR}/.config"
+
+    [[ ! -f "$flavor_config" || ! -f "$active_config" ]] && fatal "Missing config files for comparison."
+
+    log "Generating kernel config differences..."
+    diff -u "$flavor_config" "$active_config" > "$BUILDPATH/config_changes.diff"
+
+    log "Config changes stored at $BUILDPATH/config_changes.diff"
+}
+
+
 release_to_github() {
     command -v gh >/dev/null || fatal "GitHub CLI (gh) is required for release publishing"
 
@@ -813,6 +826,7 @@ run_standard_build() {
     build_kernel
     metapackage
     package_kernel
+    config_diff
     upload_kernel
     #archive_config
     #cleanup_artifacts
