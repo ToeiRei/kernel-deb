@@ -1064,9 +1064,9 @@ run_standard_build() {
     generate_source_package
     build_kernel
     metapackage
+    upload_kernel
     package_kernel
     config_diff
-    upload_kernel
     #archive_config
     #cleanup_artifacts
 
