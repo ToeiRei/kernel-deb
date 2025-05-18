@@ -6,6 +6,7 @@ ARGS ?=
 IMAGE_NAME = dockerbuild-kernel-builder
 LOCAL_KBUILD = kbuild2.sh
 IMAGE_KBUILD = /usr/local/bin/kbuild2
+BUILDTIME := ./buildtime
 
 # Phony targets
 .PHONY: help all default vanilla vm build run shell publish clean mrproper stop logs menuconfig check-image
@@ -24,13 +25,33 @@ all: run  ## Alias for 'run' target
 ##@ Build Targets
 
 vanilla: check-image  ## Build vanilla kernel
-	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
+	@$(BUILDTIME) start kbuild2 vanilla
+	@$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS); \
+	status=$$?; \
+	if [ $$status -eq 0 ]; then \
+	    $(BUILDTIME) stop; \
+	else \
+	    $(BUILDTIME) failed; \
+	    exit $$status; \
+	fi
 
 vm: check-image  ## Build VM kernel
-	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS) --vm
+	@$(BUILDTIME) start kbuild2 vm
+	@$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS) --vm; \
+	status=$$?; \
+	if [ $$status -eq 0 ]; then \
+	    $(BUILDTIME) stop; \
+	else \
+	    $(BUILDTIME) failed; \
+	    exit $$status; \
+	fi
+
 
 build:  ## Build Docker image with local mirror support
-	$(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true
+	@$(BUILDTIME) start kbuild2 kbuild-container
+	@$(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true && \
+	  $(BUILDTIME) stop || ( $(BUILDTIME) failed && exit 1 )
+
 
 run: check-image  ## Run kernel build with optional args
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
@@ -55,6 +76,7 @@ publish: check-image  ## Publish release to GitHub
 
 clean:  ## Remove build artifacts
 	sudo rm -rf build/*
+	sudo rm -rf release/*
 
 mrproper: clean stop  ## Full cleanup including Docker and ccache
 	docker system prune -f

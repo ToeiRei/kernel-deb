@@ -359,45 +359,38 @@ enrich_diff_markdown() {
 
 
 release_to_github() {
-    command -v gh >/dev/null || fatal "GitHub CLI (gh) is required for release publishing"
-
-    local version="$1"
-    [[ -z "$version" ]] && fatal "No version passed to release_to_github"
-
-    log "Publishing kernel release $version to GitHub"
-
     pushd "/gitrepo" >/dev/null || fatal "Cannot change directory to Git repo"
+    
+    # Step 1: Set the Git repository's directory as safe.
+    git config --global --add safe.directory /gitrepo
 
+    # Step 2: Set up GitHub authentication.
+    command -v gh >/dev/null || fatal "GitHub CLI (gh) is required for release publishing"
     if [[ -z "$GH_TOKEN" ]]; then
         fatal "GitHub token (GH_TOKEN) is missing. Authentication will fail."
     fi
-
     export GH_TOKEN="${GH_TOKEN}"
     gh auth status || fatal "GitHub authentication failed"
     gh auth setup-git || fatal "GitHub authentication setup for git failed"
-    
-    # Validate MAINTAINER format
+
+    # Step 3: Set up the MAINTAINER information.
     if [[ ! "$MAINTAINER" =~ .*\<.*@.*\> ]]; then
         fatal "Invalid MAINTAINER format: '$MAINTAINER'. Expected format: 'Name <email@example.com>'"
     fi
-
-    # Set temporary Git author identity for commits inside the container
-    # Extract email and name from MAINTAINER variable
-    MAINTAINER_NAME="${MAINTAINER%% <*}"      # Remove everything after ' <'
-    MAINTAINER_EMAIL="${MAINTAINER##*<}"        # Keep only email
-    MAINTAINER_EMAIL="${MAINTAINER_EMAIL%>}"     # Remove trailing '>'
-
-    # Set Git identity using extracted values
+    MAINTAINER_NAME="${MAINTAINER%% <*}"  # Extract name
+    MAINTAINER_EMAIL="${MAINTAINER##*<}"    # Extract email
+    MAINTAINER_EMAIL="${MAINTAINER_EMAIL%>}"
     git config --global user.name "$MAINTAINER_NAME"
     git config --global user.email "$MAINTAINER_EMAIL"
-
     log "MAINTAINER is set to: ${MAINTAINER_NAME} <${MAINTAINER_EMAIL}>"
 
-    git config --global --add safe.directory /gitrepo
+    # Step 4: Commit configuration files (or any local changes) to the repo.
+    # Note: Adjust the files to commit as necessary.
+    git add .
+    git commit -m "$1" || log "No changes to commit"
 
-    # Commit any local changes (assumed to be benign or fixed by your script)
-    git commit -m "$version" || log "No changes to commit"
-
+    # Step 5: Create a tag if it doesn’t exist.
+    local version="$1"
     if git rev-parse "$version" >/dev/null 2>&1; then
         log "Tag '$version' already exists. Skipping tag creation."
     else
@@ -405,63 +398,57 @@ release_to_github() {
         git push --tags
     fi
 
+    # Step 6: Push commits.
     git push
 
-
-
+    # Step 7: Craft a release readme from the enriched changelogs.
     local release_notes="${HOME}/release.md"
-    if [[ ! -f "$release_notes" ]]; then
-        log "Generating default release notes"
-        cat > "$release_notes" <<EOF
-Kernel release: $version
+    {
+        echo "Kernel release: $version"
+        echo ""
+        echo "Includes:"
+        echo "- linux-image"
+        echo "- linux-headers"
+        echo "- linux-libc-dev"
+        echo ""
+        echo "Variants built:"
+        echo "- vanilla-kernel: full Debian-based config"
+        echo "- vm-kernel: minimal driver footprint for virtual machines"
+        echo "- rt-kernel: real-time configuration"
+        echo ""
+        echo "Variants:"
+        echo " - vanilla-kernel: full Debian-based config"
+        echo " - vm-kernel: minimal driver footprint for virtual machines"
+        echo ""
+        echo "Source code is included as a ZIP archive (quilt format)"
+        echo "Built with a mildly cursed Bash script."
+        echo ""
+        echo "PS: We’ve taken the liberty of summarizing the configuration diff—because transparency is our middle name."
+    } > "$release_notes"
 
-Includes:
-- linux-image
-- linux-headers
-- linux-libc-dev
-
-Variants:
-- vanilla-kernel: full Debian-based config
-- vm-kernel: minimal driver footprint for virtual machines
-
-Source code is included as a ZIP archive (quilt format)
-
-Built with a mildly cursed Bash script.
-EOF
-        # Add a dash of attitude!
-        echo "" >> "$release_notes"
-        echo "PS: We’ve taken the liberty of summarizing the configuration diff—because transparency is our middle name." >> "$release_notes"
-    fi
-
-    # Optionally, if you have a config variant defined and a diff file exists,
-    # enrich it and append to the release notes.
-    if [[ -n "$config_variant" ]]; then
-        local diff_file="$RELEASEDIR/config_changes-${config_variant}.diff"
+    # Loop over all expected config variants (even if a diff file is missing for some, that’s fine)
+    for variant in vanilla vm rt; do
+        local diff_file="${RELEASEDIR}/config_changes-${variant}-enriched.md"
         if [[ -f "$diff_file" && -s "$diff_file" ]]; then
-            log "Enriching configuration diff for variant '$config_variant'"
-            # Call your enrichment function and capture its output
-            local enriched_diff
-            enriched_diff=$(enrich_diff_markdown "$diff_file")
             echo "" >> "$release_notes"
-            echo "### Enriched Configuration Changes for ${config_variant}" >> "$release_notes"
+            echo "#### ${variant} configuration changes" >> "$release_notes"
             echo "" >> "$release_notes"
-            echo "$enriched_diff" >> "$release_notes"
+            cat "$diff_file" >> "$release_notes"
         else
-            log "No config diff found for variant '$config_variant'; skipping enrichment."
+            log "No enriched config diff found for variant '$variant'; skipping."
         fi
-    fi
+    done
 
-    # Collect all relevant release files
+    # Step 8: Loop through all the release assets.
     mapfile -t assets < <(find "$RELEASEDIR" -type f \( -name "*${version}*.zip" -o -name "*${version}*.zip.sha256sum" \))
-
     if [[ ${#assets[@]} -eq 0 ]]; then
         fatal "No release assets found in $RELEASEDIR"
     fi
-
     log "Attaching the following assets to release: ${assets[*]}"
-    gh release create -d "$version" -F "$release_notes" "${assets[@]}"
 
-    log "Release $version published to GitHub" "INFO"
+    # Step 9: Create a draft GitHub release with the release notes and assets.
+    gh release create -d "$version" -F "$release_notes" "${assets[@]}"
+    log "Release $version published to GitHub as a draft."
     popd >/dev/null
 }
 

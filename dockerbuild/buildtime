@@ -1,0 +1,399 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DB="${HOME}/.buildtime.db"
+ID_FILE="${HOME}/.buildtime_id"
+
+# === Colors & Symbols ===
+USE_COLOR=$(tput colors 2>/dev/null || echo 0)
+color() { [[ "$USE_COLOR" -ge 8 ]] && tput setaf "$1"; }
+reset_color() { [[ "$USE_COLOR" -ge 8 ]] && tput sgr0; }
+
+info() { echo -e "$(color 4)ℹ️ $(reset_color)$*"; }
+warn() { echo -e "$(color 3)⚠️ $(reset_color)$*"; }
+fail() { echo -e "$(color 1)❌ $(reset_color)$*"; }
+ok()   { echo -e "$(color 2)✅ $(reset_color)$*"; }
+
+# === ID generation ===
+get_distro() {
+    [[ -f /etc/os-release ]] && . /etc/os-release && echo "$NAME $VERSION_ID" || uname -o
+}
+
+ensure_db() {
+    [[ -f "$DB" ]] || touch "$DB"
+    sqlite3 "$DB" <<SQL_EOF
+CREATE TABLE IF NOT EXISTS builds (
+    timestamp INT,
+    machine   TEXT,
+    kernel    TEXT,
+    variant   TEXT,
+    seconds   INT,
+    failed    INT DEFAULT 0
+);
+SQL_EOF
+}
+
+
+generate_id() {
+    local cpu_flags cpu_hash cores mem_gb storage env arch distro
+    cpu_flags=$(grep -m1 'flags' /proc/cpuinfo | cut -d: -f2 | xargs)
+    cpu_hash=$(echo "$cpu_flags" | sha256sum | cut -c1-8)
+    cores=$(nproc)
+    mem_gb=$(free -g | awk '/Mem:/ {print $2}')
+    arch=$(uname -m)
+    distro=$(get_distro)
+
+    # Storage
+    storage="unknown"
+    [[ -d /sys/block/sda ]] && {
+        grep -q 0 /sys/block/sda/queue/rotational 2>/dev/null && storage="ssd" || storage="hdd"
+    }
+    grep -qi "microsoft" /proc/version && storage="wsl-$(df -T / | awk 'NR==2 {print $2}' | cut -c1-4)"
+
+    # Env
+    env="native"
+    [[ -f /.dockerenv ]] && env="docker"
+    grep -qi "microsoft" /proc/version && env="wsl"
+
+    local id="bt-${cpu_hash:0:4}-${arch}-${cores}c-${mem_gb}g-${storage}-${env}"
+    {
+        echo "$id"
+        echo "ARCH:     $arch"
+        echo "CORES:    $cores"
+        echo "RAM:      ${mem_gb}GB"
+        echo "STORAGE:  $storage"
+        echo "ENV:      $env"
+        echo "DISTRO:   $distro"
+    } > "$ID_FILE"
+}
+
+cmd_id() {
+    [[ ! -f "$ID_FILE" ]] && generate_id
+    echo "=== Machine Fingerprint ==="
+    cat "$ID_FILE"
+}
+
+# === Start build ===
+cmd_start() {
+    ensure_db
+    [[ $# -lt 2 ]] && fail "Usage: $0 start <kernel> <variant>" && exit 1
+    [[ ! -f "$ID_FILE" ]] && generate_id
+
+    local uuid=$(uuidgen)
+    echo "$(date +%s),$1,$2,$uuid" > "/tmp/buildtime_$uuid.tmp"
+
+    info "Build started: $(date)"
+    info "Version: $1 | Variant: $2 | ID: $uuid"
+}
+
+# === Stop build ===
+cmd_stop() {
+    ensure_db
+    local tmpfile=$(find /tmp -maxdepth 1 -name 'buildtime_*.tmp' | head -n1)
+    [[ -z "$tmpfile" ]] && fail "No active build" && exit 1
+
+    IFS=',' read -r start_time kernel variant uuid < "$tmpfile"
+    local duration=$(( $(date +%s) - start_time ))
+    local machine_id=$(head -n1 "$ID_FILE")
+
+    sqlite3 "$DB" <<SQL
+CREATE TABLE IF NOT EXISTS builds(
+    timestamp INT,
+    machine TEXT,
+    kernel TEXT,
+    variant TEXT,
+    seconds INT
+);
+INSERT INTO builds VALUES(
+    $start_time,
+    '$machine_id',
+    '$kernel',
+    '$variant',
+    $duration
+);
+SQL
+
+    rm -f "$tmpfile"
+    show_build_report "$kernel" "$variant" "$duration"
+}
+
+show_build_report() {
+    local kernel=$1 variant=$2 duration=$3
+    local history avg last delta trend sparkline
+
+    printf "\n⏱️  Build finished: %02d:%02d:%02d\n" \
+        $((duration/3600)) $(( (duration%3600)/60 )) $((duration%60))
+
+    history=$(sqlite3 -separator '|' "$DB" \
+        "SELECT seconds FROM builds 
+         WHERE kernel='$kernel' AND variant='$variant' 
+         ORDER BY timestamp DESC LIMIT 15")
+
+    if [[ -n "$history" ]]; then
+        # Generate sparkline
+        if [[ "$USE_COLOR" -ge 8 ]]; then
+            sparkline=$(echo "$history" | awk -F, '{
+                max=$1; min=$1;
+                for(i=1;i<=NF;i++) {if($i>max)max=$1; if($i<min)min=$1}
+                range=max-min; if(range==0)range=1;
+                for(i=1;i<=NF;i++) {
+                    printf "\033[38;5;%dm%s", 
+                    232 + int( ($i-min)/range * 23 + 1),
+                    substr("▁▂▃▄▅▆▇█", int( ($i-min)/range * 7 + 1), 1)
+                }
+            }')
+            sparkline+=$(tput sgr0)
+        fi
+
+        last=$(echo "$history" | head -1)
+        avg=$(echo "$history" | awk '{sum+=$1} END{print int(sum/NR)}')
+        delta=$((last - avg))
+
+        if (( delta > 0 )); then
+            trend="▲ $(printf '%02d:%02d' $((delta/60)) $((delta%60))) slower"
+        else
+            trend="▼ $(printf '%02d:%02d' $((-delta/60)) $((-delta%60))) faster"
+        fi
+
+        echo "📈 Trend: $trend"
+        echo "📊 Avg: $(printf '%02d:%02d' $((avg/60)) $((avg%60)))"
+        [[ -n "$sparkline" ]] && echo "📉 Trendline: $sparkline"
+    else
+        info "First recorded build of this type"
+    fi
+}
+
+# === ETA ===
+cmd_eta() {
+    local tmpfile=$(find /tmp -maxdepth 1 -name 'buildtime_*.tmp' | head -n1)
+    [[ -z "$tmpfile" ]] && warn "No active build" && return
+
+    IFS=',' read -r start_time kernel variant uuid < "$tmpfile"
+    local now=$(date +%s)
+    local elapsed=$(( now - start_time ))
+
+    local avg=$(sqlite3 "$DB" "SELECT AVG(seconds) FROM builds WHERE kernel='$kernel' AND variant='$variant'")
+    avg=${avg%.*}
+    (( avg == 0 )) && fail "Not enough data to estimate" && return
+
+    local eta=$(( start_time + avg ))
+    local remaining=$(( eta - now ))
+
+    echo "📅 Estimated End: $(date -d "@$eta")"
+    echo "⏱️  Elapsed: $(printf '%02d:%02d:%02d' $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60)))"
+    echo "⌛ Remaining: $(printf '%02d:%02d:%02d' $((remaining/3600)) $((remaining%3600/60)) $((remaining%60)))"
+}
+
+# === Fail current ===
+cmd_failed() {
+    ensure_db
+    local tmpfile=$(find /tmp -maxdepth 1 -name 'buildtime_*.tmp' | head -n1)
+    [[ -z "$tmpfile" ]] && warn "No active build to fail" && return
+    rm -f "$tmpfile"
+    fail "Build marked as failed and state removed."
+}
+
+# === Cleanup leftover builds ===
+cmd_cleanup() {
+    local files=$(find /tmp -maxdepth 1 -name 'buildtime_*.tmp')
+    [[ -z "$files" ]] && ok "No stale builds." && return
+
+    for f in $files; do
+        warn "Removing stale state: $f"
+        rm -f "$f"
+    done
+    ok "Cleanup complete."
+}
+
+# === Stats ===
+cmd_stats() {
+    # Column widths (same as before)
+    local build_col=30 runs_col=4 time_col=7 trend_col=5
+    local total_width=$(( build_col + runs_col + time_col*3 + trend_col + 5 ))
+    
+    # Visual header with same style as hist
+    echo  # Breathing room
+    printf "\033[1;36m╭────────────────────────────────────────────────────────────╮\n"
+    printf "│ \033[1;33m📊 Build Time Statistics \033[0m\033[1;36m%-31s   │\n" ""
+    printf "╰────────────────────────────────────────────────────────────╯\033[0m\n"
+    
+    # Column headers (styled)
+    printf "\033[1m%-${build_col}s %${runs_col}s %${time_col}s %${time_col}s %${time_col}s %s\033[0m\n" \
+        "Build" "Runs" "Avg" "Best" "Worst" "Trend"
+    printf "%.0s─" $(seq 1 $total_width); echo  # Matching divider
+
+    sqlite3 -separator '|' "$DB" \
+        "SELECT 
+            kernel, variant, 
+            COUNT(*), 
+            CAST(ROUND(AVG(seconds)) AS INT), 
+            MIN(seconds), 
+            MAX(seconds),
+            GROUP_CONCAT(seconds, ',')
+         FROM builds 
+         GROUP BY kernel, variant
+         ORDER BY MAX(timestamp) DESC;" |
+    while IFS='|' read -r kernel variant count avg min max history; do
+        # Force integer conversion
+        avg=$(( ${avg%.*:-0} ))
+        min=$(( ${min%.*:-0} ))
+        max=$(( ${max%.*:-0} ))
+        
+        # Format name (30 chars max)
+        local name="${kernel} (${variant})"
+        if [[ ${#name} -gt $build_col ]]; then
+            name="${kernel:0:18}..(${variant:0:7})"
+        fi
+
+        # Print base columns
+        printf "%-${build_col}s %${runs_col}d  %02d:%02d   %02d:%02d   %02d:%02d   " \
+            "$name" "$count" \
+            $((avg/60)) $((avg%60)) \
+            $((min/60)) $((min%60)) \
+            $((max/60)) $((max%60))
+
+        # Sparkline (if colors supported)
+        if [[ "$USE_COLOR" -ge 8 ]] && [[ -n "$history" ]]; then
+            echo "$history" | awk -F, -v cols="$trend_col" '
+                BEGIN { split("▁▂▃▄▅▆▇█", blocks, "") }
+                {
+                    min = max = $1
+                    for(i=1; i<=NF; i++) {
+                        if($i+0 < min) min = $i+0
+                        if($i+0 > max) max = $i+0
+                    }
+                    range = max - min
+                    if(range == 0) range = 1
+                    limit = (NF > cols) ? cols : NF
+                    for(i=1; i<=limit; i++) {
+                        val = ($i - min) / range
+                        c = 232 + int(val * 23) + 1
+                        b = blocks[int(val * 7) + 1]
+                        printf "\033[38;5;%dm%s", c, b
+                    }
+                }'
+            printf "\033[0m"  # Reset color
+        fi
+        echo  # Final newline
+    done
+}
+
+
+
+generate_sparkline() {
+    echo "$1" | awk -F, '{
+        max=$1; min=$1;
+        for(i=1;i<=NF;i++) {if($i>max)max=$1; if($i<min)min=$1}
+        range=max-min; if(range==0)range=1;
+        for(i=1;i<=NF;i++) {
+            printf "\033[38;5;%dm%s", 
+            232 + int( ($i-min)/range * 23 + 1),
+            substr("▁▂▃▄▅▆▇█", int( ($i-min)/range * 7 + 1), 1)
+        }
+    }'
+    tput sgr0
+}
+
+# === List Sessions ===
+cmd_ls() {
+    shopt -s nullglob
+    local tmpfiles=(/tmp/buildtime_*.tmp)
+    [[ ${#tmpfiles[@]} -eq 0 ]] && {
+        echo "📭 No active builds"
+        return
+    }
+
+    echo "🧵 Active build sessions:"
+    for f in "${tmpfiles[@]}"; do
+        local pid=${f##*_}
+        IFS=',' read -r start_time kernel variant < "$f"
+        local age=$(( $(date +%s) - start_time ))
+        printf " - PID %-6s | %s (%s) | started %02d:%02d:%02d ago\n" \
+            "$pid" "$kernel" "$variant" \
+            $((age/3600)) $(( (age%3600)/60 )) $((age%60))
+    done
+}
+
+# === History ===
+cmd_hist() {
+    local limit=${1:-10}
+    
+    # Column widths (same as before)
+    local date_col=10 time_col=5 dur_col=8 var_col=12 pkg_col=15
+    local total_width=$(( date_col + time_col*2 + dur_col + var_col + pkg_col + 10 ))
+    
+    # Enhanced header with visual style
+    echo  # Extra newline for breathing room
+    printf "\033[1;36m╭────────────────────────────────────────────────────────────╮\n"
+    printf "│ \033[1;33m🕒 Recent Builds (Last %-3d) \033[0m\033[1;36m%-25s      │\n" "$limit" ""
+    printf "╰────────────────────────────────────────────────────────────╯\033[0m\n"
+    
+    # Column headers (now with subtle styling)
+    printf "\033[1m%-${date_col}s  %-${time_col}s  %-${time_col}s  %-${dur_col}s  %-${var_col}s  %s\033[0m\n" \
+        "Date" "Start" "End" "Duration" "Variant" "Package"
+    printf "%.0s─" $(seq 1 $total_width); echo  # Divider line
+
+    sqlite3 -separator '|' "$DB" \
+        "SELECT timestamp, seconds, kernel, variant 
+         FROM builds 
+         ORDER BY timestamp DESC 
+         LIMIT $limit" |
+    while IFS='|' read -r ts secs kernel variant; do
+        local end_ts=$((ts + secs))
+        
+        # Format variant name (smart truncation)
+        local var_display="$variant"
+        [[ ${#variant} -gt $var_col ]] && var_display="${variant:0:$((var_col-2))}.."
+        
+        # Format package name (smart truncation)
+        local pkg_display="$kernel"
+        [[ ${#kernel} -gt $pkg_col ]] && pkg_display="${kernel:0:$((pkg_col-2))}.."
+        
+        printf "%-${date_col}s  %-${time_col}s  %-${time_col}s  %02d:%02d:%02d  %-${var_col}s  %s\n" \
+            "$(date -d "@$ts" "+%Y-%m-%d")" \
+            "$(date -d "@$ts" "+%H:%M")" \
+            "$(date -d "@$end_ts" "+%H:%M")" \
+            $((secs/3600)) $(( (secs%3600)/60 )) $((secs%60)) \
+            "$var_display" \
+            "$pkg_display"
+    done
+}
+
+# === Help ===
+cmd_help() {
+    cat <<EOF
+Usage: $0 <command> [args]
+
+Commands:
+  id             Show machine fingerprint
+  start <v> <b>  Start tracking a build
+  stop           Finalize and record build
+  ls             List running build sessions
+  eta            Show estimated finish time
+  failed         Mark current build as failed
+  cleanup        Remove stale/abandoned sessions
+  stats          Show historical stats
+  hist           Show package history
+  help           Show this help
+
+Example:
+  $0 start 6.14.6 vanilla
+  make -j$(nproc)
+  $0 stop
+EOF
+}
+
+# === Dispatch ===
+case "${1:-}" in
+    id)       cmd_id ;;
+    start)    shift; cmd_start "$@" ;;
+    stop)     cmd_stop ;;
+    eta)      cmd_eta ;;
+    failed)   cmd_failed ;;
+    cleanup)  cmd_cleanup ;;
+    stats)    cmd_stats ;;
+    help|"")  cmd_help ;;
+    ls)       cmd_ls ;;
+    hist)     shift; cmd_hist "$@" ;;
+    *)        fail "Unknown command: $1"; exit 1 ;;
+esac
