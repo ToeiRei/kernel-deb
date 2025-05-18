@@ -451,7 +451,7 @@ release_to_github() {
     log "Attaching the following assets to release: ${assets[*]}"
 
     # Step 9: Create a draft GitHub release with the release notes and assets.
-    gh release create -d "$version" -F "$release_notes" "${assets[@]}"
+    gh release create -d "$version" -t "Kernel release: $version" -F "$release_notes" "${assets[@]}"
     log "Release $version published to GitHub as a draft."
     popd >/dev/null
 }
