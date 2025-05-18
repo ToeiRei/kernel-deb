@@ -851,7 +851,7 @@ upload_kernel() {
 
     if [[ "$UPLOAD_NEXUS" == true ]]; then
          [[ -z "$NEXUS_USER" || -z "$NEXUS_PW" || -z "$NEXUS_REPO" ]] && fatal "Nexus credentials or repo not configured"
-            log "Uploading $pkg to Nexus" "INFO"
+         log "Uploading $pkg to Nexus" "INFO"
          for pkg in "${debs[@]}"; do
 			curl -u "${NEXUS_USER}:${NEXUS_PW}" -H "Content-Type: multipart/form-data" --data-binary "@${pkg}" "${NEXUS_REPO}"
          done
