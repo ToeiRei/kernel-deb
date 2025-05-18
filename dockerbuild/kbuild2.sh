@@ -411,14 +411,18 @@ release_to_github() {
         echo "- linux-headers"
         echo "- linux-libc-dev"
         echo ""
-        echo "Variants built:"
-        echo "- vanilla-kernel: full Debian-based config"
-        echo "- vm-kernel: minimal driver footprint for virtual machines"
-        echo "- rt-kernel: real-time configuration"
-        echo ""
         echo "Variants:"
-        echo " - vanilla-kernel: full Debian-based config"
-        echo " - vm-kernel: minimal driver footprint for virtual machines"
+        if [[ -f "${RELEASEDIR}/config_changes-vanilla-enriched.md" ]]; then
+            echo "- vanilla-kernel: full Debian-based config"
+        fi
+
+        if [[ -f "${RELEASEDIR}/config_changes-vm-enriched.md" ]]; then
+            echo "- vm-kernel: minimal driver footprint for virtual machines"
+        fi
+
+        if [[ -f "${RELEASEDIR}/config_changes-rt-enriched.md" ]]; then
+            echo "- rt-kernel: real-time configuration"
+        fi
         echo ""
         echo "Source code is included as a ZIP archive (quilt format)"
         echo "Built with a mildly cursed Bash script."
