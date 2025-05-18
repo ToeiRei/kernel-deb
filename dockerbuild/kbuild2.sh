@@ -368,6 +368,14 @@ release_to_github() {
 
     pushd "/gitrepo" >/dev/null || fatal "Cannot change directory to Git repo"
 
+    if [[ -z "$GH_TOKEN" ]]; then
+        fatal "GitHub token (GH_TOKEN) is missing. Authentication will fail."
+    fi
+
+    export GH_TOKEN="${GH_TOKEN}"
+    gh auth status || fatal "GitHub authentication failed"
+    gh auth setup-git || fatal "GitHub authentication setup for git failed"
+    
     # Validate MAINTAINER format
     if [[ ! "$MAINTAINER" =~ .*\<.*@.*\> ]]; then
         fatal "Invalid MAINTAINER format: '$MAINTAINER'. Expected format: 'Name <email@example.com>'"
@@ -380,10 +388,12 @@ release_to_github() {
     MAINTAINER_EMAIL="${MAINTAINER_EMAIL%>}"     # Remove trailing '>'
 
     # Set Git identity using extracted values
-    git config user.name "$MAINTAINER_NAME"
-    git config user.email "$MAINTAINER_EMAIL"
+    git config --global user.name "$MAINTAINER_NAME"
+    git config --global user.email "$MAINTAINER_EMAIL"
 
     log "MAINTAINER is set to: ${MAINTAINER_NAME} <${MAINTAINER_EMAIL}>"
+
+    git config --global --add safe.directory /gitrepo
 
     # Commit any local changes (assumed to be benign or fixed by your script)
     git commit -m "$version" || log "No changes to commit"
@@ -397,12 +407,7 @@ release_to_github() {
 
     git push
 
-    if [[ -z "$GH_TOKEN" ]]; then
-        fatal "GitHub token (GH_TOKEN) is missing. Authentication will fail."
-    fi
 
-    export GH_TOKEN="${GH_TOKEN}"
-    gh auth status || fatal "GitHub authentication failed"
 
     local release_notes="${HOME}/release.md"
     if [[ ! -f "$release_notes" ]]; then
