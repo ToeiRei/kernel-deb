@@ -2,3 +2,4 @@ releases
 dockerbuild/release
 dockerbuild/build
 dockerbuild/config.json
+dockerbuild/.packagecloud
