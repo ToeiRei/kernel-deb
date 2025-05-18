@@ -1105,7 +1105,7 @@ run_standard_build() {
     package_kernel
     config_diff
     archive_config
-    #cleanup_artifacts
+    cleanup_artifacts
 
 }
 
