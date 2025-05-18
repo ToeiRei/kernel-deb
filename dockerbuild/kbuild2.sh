@@ -826,7 +826,7 @@ upload_kernel() {
     [[ "$UPLOAD_PACKAGECLOUD" == false && "$UPLOAD_NEXUS" == false ]] && return
 
     # Gather all .deb files from BUILDPATH (non-recursively).
-    mapfile -t debs < <(find "$BUILDPATH" -maxdepth 1 -type f -name '*.deb')
+    mapfile -t debs < <(find "$BUILDPATH" -maxdepth 2 -type f -name '*.deb')
     if [[ ${#debs[@]} -eq 0 ]]; then
          fatal "No deb packages found in $BUILDPATH"
     fi
