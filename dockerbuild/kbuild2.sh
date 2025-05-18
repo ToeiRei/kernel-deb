@@ -702,25 +702,29 @@ metapackage() {
     [[ -z "${BUILDPATH:-}" ]] && fatal "BUILDPATH is not set"
     [[ -z "${KERNEL_VERSION:-}" ]] && fatal "KERNEL_VERSION is not set"
 
-    # Determine build variant based on flags
+    # Determine build variant based on flags and compute the localversion suffix.
     local package_name=""
-    local suffix=""
+    local localversion=""
 
     if [[ "$USE_RT" == true ]]; then
         package_name="rt-kernel"
-        suffix="-rt"
+        localversion="-rt"
     elif [[ "$USE_VM" == true ]]; then
         package_name="vm-kernel"
-        suffix="-vm"
+        localversion="-vm"
     else
         package_name="vanilla-kernel"
-        suffix=""
+        localversion=""
     fi
 
-    log "Packaging kernel meta-package: ${package_name}"
+    # Append the base local version (e.g. "toeirei" by default, or whatever is set in SUFFIX)
+    localversion+="-${SUFFIX:-toeirei}"
 
-    # Set up the dependency list based on the kernel version and variant.
-    local depends="linux-image-${KERNEL_VERSION}${suffix},linux-headers-${KERNEL_VERSION}${suffix},linux-libc-dev"
+    log "Packaging kernel meta-package: ${package_name}"
+    log "Computed localversion string: ${localversion}"
+
+    # Set up the dependency list based on the kernel version and variant
+    local depends="linux-image-${KERNEL_VERSION}${localversion},linux-headers-${KERNEL_VERSION}${localversion},linux-libc-dev"
 
     # Create a package directory for the current build
     local pkg_dir="${BUILDPATH}/${package_name}"
@@ -729,7 +733,7 @@ metapackage() {
     local cfg_file="${pkg_dir}/${package_name}.cfg"
     log "Generating Debian meta-package config at: ${cfg_file}"
 
-    # Generate the configuration file for the Debian meta-package.
+    # Generate the configuration file for the Debian meta-package
     cat <<EOF >"$cfg_file"
 Section: kernel
 Priority: optional
@@ -737,7 +741,7 @@ Homepage: ${HOMEPAGE:-http://example.com}
 Standards-Version: ${KERNEL_VERSION}
 
 Package: ${package_name}
-Version: ${KERNEL_VERSION}-${SUFFIX:-toeirei}
+Version: ${KERNEL_VERSION}${localversion}
 Maintainer: ${MAINTAINER:-Your Name <email@example.com>}
 
 Depends: ${depends}
@@ -756,8 +760,10 @@ EOF
     fi
     popd >/dev/null
 
-    log "Debian meta-package generated successfully: ${package_name} (version: ${KERNEL_VERSION})"
+    log "Debian meta-package generated successfully: ${package_name} (version: ${KERNEL_VERSION}${localversion})"
 }
+
+
 
 
 
