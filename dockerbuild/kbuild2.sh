@@ -435,7 +435,7 @@ release_to_github() {
         local diff_file="${RELEASEDIR}/config_changes-${variant}-enriched.md"
         if [[ -f "$diff_file" && -s "$diff_file" ]]; then
             echo "" >> "$release_notes"
-            echo "#### ${variant} configuration changes" >> "$release_notes"
+            echo "### ${variant} configuration changes" >> "$release_notes"
             echo "" >> "$release_notes"
             cat "$diff_file" >> "$release_notes"
         else
