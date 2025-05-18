@@ -65,6 +65,7 @@ parse_config() {
         MAINTAINER=$(jq -r '.maintainer // empty' "$CONFIG_FILE")
         WGETPARMS=$(jq -r '.wgetparms // "-q"' "$CONFIG_FILE")
         PACKAGECLOUD_DEB=$(jq -r '.packagecloud_deb // empty' "$CONFIG_FILE")
+        PACKAGECLOUD_DEB2=$(jq -r '.packagecloud_deb2 // empty' "$CONFIG_FILE")
         NEXUS_USER=$(jq -r '.nexus_user // empty' "$CONFIG_FILE")
         NEXUS_PW=$(jq -r '.nexus_pass // empty' "$CONFIG_FILE")
         NEXUS_REPO=$(jq -r '.nexus_repo // empty' "$CONFIG_FILE")
@@ -84,6 +85,7 @@ parse_config() {
         MAINTAINER="${MAINTAINER:-GitHub Actions <gh@actions.local>}"
         WGETPARMS="${WGETPARMS:--q}"
         PACKAGECLOUD_DEB="${PACKAGECLOUD_DEB:-}"
+        PACKAGECLOUD_DEB2="${PACKAGECLOUD_DEB2:-}"
         NEXUS_USER="${NEXUS_USER:-}"
         NEXUS_PW="${NEXUS_PW:-}"
         NEXUS_REPO="${NEXUS_REPO:-}"
