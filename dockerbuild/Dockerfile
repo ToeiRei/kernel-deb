@@ -3,8 +3,8 @@ FROM debian:latest AS builder
 
 # Define a build argument to control local mirror usage.
 ARG USE_LOCAL_MIRROR=false
-# TARGET_ARCH defaults to amd64 (native) but can be set to "arm64" (or others later)
-ARG TARGET_ARCH=amd64
+# TARGET_ARCH defaults to x86 (native) but can be set to "arm64" (or others later)
+ARG TARGET_ARCH=x86
 # CROSS_COMPILE_PREFIX should be set when cross compiling. For arm64, set to "aarch64-linux-gnu-"
 ARG CROSS_COMPILE_PREFIX=
 
@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # If the target architecture is not native, install the appropriate cross toolchain.
 # For example, for arm64 (aarch64), install gcc-aarch64-linux-gnu and binutils-aarch64-linux-gnu.
-RUN if [ "$TARGET_ARCH" != "amd64" ]; then \
+RUN if [ "$TARGET_ARCH" != "x86" ]; then \
       if [ "$TARGET_ARCH" = "arm64" ]; then \
          apt-get update && apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu; \
          echo "Cross-compiling for arm64"; \
@@ -51,7 +51,7 @@ RUN if [ "$TARGET_ARCH" != "amd64" ]; then \
          exit 1; \
       fi; \
     else \
-      echo "Native build for amd64"; \
+      echo "Native build for x86"; \
     fi
 
 # Install LLVM using the apt script

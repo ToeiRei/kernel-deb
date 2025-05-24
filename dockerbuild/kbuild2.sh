@@ -19,7 +19,7 @@ SUFFIX=""
 
 # === New Cross-Compile Variables ===
 # If CROSS_COMPILE is empty, we assume a native build
-ARCH="${ARCH:-amd64}"
+ARCH="${ARCH:-x86}"  # Default to x86 if not set
 CROSS_COMPILE="${CROSS_COMPILE:-}"
 
 # Utils

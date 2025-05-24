@@ -3,7 +3,7 @@ services:
     build:
       context: .
       args:
-        TARGET_ARCH: ${TARGET_ARCH:-amd64}
+        TARGET_ARCH: ${TARGET_ARCH:-x86}
         CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-}
     container_name: kernel-builder
     volumes:
@@ -17,7 +17,7 @@ services:
       - ./.packagecloud:/root/.packagecloud
     environment:
       - TZ=Europe/Vienna
-      - ARCH=${TARGET_ARCH:-amd64}
+      - ARCH=${TARGET_ARCH:-x86}
       - CROSS_COMPILE=${CROSS_COMPILE_PREFIX:-}
     stdin_open: true
     tty: true
@@ -26,7 +26,7 @@ services:
     build:
       context: .
       args:
-        TARGET_ARCH: ${TARGET_ARCH:-amd64}
+        TARGET_ARCH: ${TARGET_ARCH:-x86}
         CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-}
     container_name: shell
     volumes:
