@@ -17,6 +17,11 @@ NTFY_URL=""
 CLEAN_BUILD=false
 SUFFIX=""
 
+# === New Cross-Compile Variables ===
+# If CROSS_COMPILE is empty, we assume a native build
+ARCH="${ARCH:-amd64}"
+CROSS_COMPILE="${CROSS_COMPILE:-}"
+
 # Utils
 fatal() {
     echo "[FATAL] $*" >&2
@@ -132,14 +137,24 @@ parse_args() {
             --upload-pkgcloud|--upload-packagecloud) UPLOAD_PACKAGECLOUD=true ;;
             --publish) PUBLISH_ONLY=true ;;
 	    --menuconfig) MENUCONFIG=true ;;
+            --arch)
+                shift
+                [[ $# -eq 0 ]] && fatal "--arch requires an argument"
+                ARCH="$1"
+                ;;
+            --cross-compile)
+                shift
+                [[ $# -eq 0 ]] && fatal "--cross-compile requires an argument"
+                CROSS_COMPILE="$1"
+                ;;
             -h|--help) usage ;;
             [0-9]*.[0-9]*.[0-9]*) KERNEL_VERSION="$1" ;;
-			--clean|--cleanup) CLEAN_BUILD=true ;;
-			--suffix)
-				shift
-				[[ $# -eq 0 ]] && fatal "--suffix requires an argument"
-				SUFFIX="$1"
-				;;
+            --clean|--cleanup) CLEAN_BUILD=true ;;
+            --suffix)
+                shift
+                [[ $# -eq 0 ]] && fatal "--suffix requires an argument"
+                SUFFIX="$1"
+                ;;
             *) fatal "Unknown option: $1" ;;
         esac
         shift
@@ -159,11 +174,15 @@ Options:
   --upload-pkgcloud              Upload packages to Packagecloud
   --publish                      Only publish release to GitHub (no build)
   --menuconfig                   Runs make menuconfig on a config
+  --arch <arch>                  Set target architecture (e.g. x86_64, arm64)
+  --cross-compile <prefix>       Set cross-compiler prefix (e.g. aarch64-linux-gnu-)
+  --suffix <str>                 Set custom localversion suffix
   -h, --help                     Show this help
 
 Examples:
   $SCRIPT_NAME                    # Builds latest vanilla kernel
   $SCRIPT_NAME 6.9.3 --vm         # Builds stripped kernel for 6.9.3
+  $SCRIPT_NAME 6.9.3 --arch arm64 --cross-compile aarch64-linux-gnu- --suffix test
   $SCRIPT_NAME 6.9.3 --publish    # Only publish GitHub release
 EOF
     exit 0
@@ -542,7 +561,7 @@ configure_kernel() {
 
     make_opts+=("-j$(nproc)" "olddefconfig")
     log "Running make olddefconfig with options: ${make_opts[*]}"
-    make "${make_opts[@]}"
+    make ARCH="$ARCH" CROSS_COMPILE="$CROSS_COMPILE" "${make_opts[@]}"
 
     popd >/dev/null
 }
@@ -680,15 +699,15 @@ build_kernel() {
     log "Running: make -j${jobs} ${make_params[*]}"
 
     # Build the kernel
-    make -j"${jobs}" "${make_params[@]}" || fatal "Kernel build failed"
+    make -j"${jobs}" ARCH="$ARCH" CROSS_COMPILE="$CROSS_COMPILE" "${make_params[@]}" || fatal "Kernel build failed"
 
     # Build kernel modules
     log "Building kernel modules..."
-    make -j"${jobs}" "${make_params[@]}" modules || fatal "Kernel modules build failed"
+    make -j"${jobs}" ARCH="$ARCH" CROSS_COMPILE="$CROSS_COMPILE" "${make_params[@]}" modules || fatal "Kernel modules build failed"
 
     # Package kernel into a deb package; fallback LOCALVERSION to 'custom' if not provided.
     log "Packaging kernel with deb-pkg..."
-    make -j"${jobs}" "${make_params[@]}" bindeb-pkg LOCALVERSION=-${SUFFIX:-toeirei} || fatal "Kernel packaging failed"
+    make -j"${jobs}" ARCH="$ARCH" CROSS_COMPILE="$CROSS_COMPILE" "${make_params[@]}" bindeb-pkg LOCALVERSION=-${SUFFIX:-toeirei} || fatal "Kernel packaging failed"
 
     popd >/dev/null
 }
