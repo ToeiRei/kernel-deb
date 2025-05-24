@@ -2,6 +2,8 @@
 DOCKER_COMPOSE = COMPOSE_BAKE=true docker compose
 SERVICE = kernel-builder
 SHELL_SERVICE = shell
+CROSS_SERVICE = kernel-builder-cross
+CROSS_SHELL_SERVICE = cross-shell
 ARGS ?=
 IMAGE_NAME = dockerbuild-kernel-builder
 LOCAL_KBUILD = kbuild2.sh
@@ -102,4 +104,26 @@ check-image:  ## Ensure Docker image is up-to-date with kbuild2.sh
 			echo "✅ Docker image is up-to-date."; \
 		fi \
 	fi
+
+##@ Cross Compile
+
+cross: check-image  ## Build kernel for cross target (e.g. arm64)
+    @$(BUILDTIME) start kbuild2 cross
+    @$(DOCKER_COMPOSE) run --rm $(CROSS_SERVICE) $(ARGS); \
+    status=$$?; \
+    if [ $$status -eq 0 ]; then \
+        $(BUILDTIME) stop; \
+    else \
+        $(BUILDTIME) failed; \
+        exit $$status; \
+    fi
+
+cross-shell: check-image  ## Start interactive shell in cross container
+    $(DOCKER_COMPOSE) run --rm --entrypoint /bin/bash $(CROSS_SHELL_SERVICE)
+
+cross-menuconfig: check-image  ## Launch menuconfig for cross target
+    $(DOCKER_COMPOSE) run --rm $(CROSS_SERVICE) --menuconfig $(ARGS)
+
+cross-publish: check-image  ## Publish cross build release to GitHub
+    $(DOCKER_COMPOSE) run --rm $(CROSS_SERVICE) --publish
 
