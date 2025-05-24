@@ -1,7 +1,34 @@
 services:
   kernel-builder:
-    build: .
+    build:
+      context: .
+      args:
+        TARGET_ARCH: ${TARGET_ARCH:-amd64}
+        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-}
     container_name: kernel-builder
+    volumes:
+      - ~/.ccache:/ccache
+      - ./build:/build
+      - ../kernel-configs:/config
+      - ./release:/release
+      - ./patches:/patches
+      - ./config.json:/usr/local/bin/config.json
+      - ~/kernel-deb/:/gitrepo
+      - ./.packagecloud:/root/.packagecloud
+    environment:
+      - TZ=Europe/Vienna
+      - ARCH=${TARGET_ARCH:-amd64}
+      - CROSS_COMPILE=${CROSS_COMPILE_PREFIX:-}
+    stdin_open: true
+    tty: true
+
+  shell:
+    build:
+      context: .
+      args:
+        TARGET_ARCH: ${TARGET_ARCH:-amd64}
+        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-}
+    container_name: shell
     volumes:
       - ~/.ccache:/ccache
       - ./build:/build
@@ -15,9 +42,40 @@ services:
       - TZ=Europe/Vienna
     stdin_open: true
     tty: true
+    entrypoint: /bin/bash
 
-  shell:
-    build: .
+  kernel-builder-cross:
+    build:
+      context: .
+      args:
+        # Use separate env var for cross build target (defaults to arm64)
+        TARGET_ARCH: ${CROSS_TARGET_ARCH:-arm64}
+        # For arm64, the cross compile prefix is "aarch64-linux-gnu-"
+        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-aarch64-linux-gnu-}
+    container_name: kernel-builder-cross
+    volumes:
+      - ~/.ccache:/ccache
+      - ./build:/build
+      - ../kernel-configs:/config
+      - ./release:/release
+      - ./patches:/patches
+      - ./config.json:/usr/local/bin/config.json
+      - ~/kernel-deb/:/gitrepo
+      - ./.packagecloud:/root/.packagecloud
+    environment:
+      - TZ=Europe/Vienna
+      - ARCH=${CROSS_TARGET_ARCH:-arm64}
+      - CROSS_COMPILE=${CROSS_COMPILE_PREFIX:-aarch64-linux-gnu-}
+    stdin_open: true
+    tty: true
+
+  shell-cross:
+    build:
+      context: .
+      args:
+        TARGET_ARCH: ${CROSS_TARGET_ARCH:-arm64}
+        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-aarch64-linux-gnu-}
+    container_name: cross-shell
     volumes:
       - ~/.ccache:/ccache
       - ./build:/build
