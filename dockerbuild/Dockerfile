@@ -35,7 +35,7 @@ RUN apt -o "Acquire::https::Verify-Peer=false" update && \
 # Install all required dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release wget gnupg2 curl jq xz-utils build-essential \
-    bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev \
+    bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev libdw-dev \
     dwarves bison cmake bash libzstd-dev libxxhash-dev rsync \
     debhelper git ruby rubygems equivs zip software-properties-common && \
     rm -rf /var/lib/apt/lists/*
