@@ -721,6 +721,12 @@ metapackage() {
     [[ -z "${BUILDPATH:-}" ]] && fatal "BUILDPATH is not set"
     [[ -z "${KERNEL_VERSION:-}" ]] && fatal "KERNEL_VERSION is not set"
 
+    # Normalize KERNEL_VERSION to always have three fields: major.minor.patch
+    local normalized_version="$KERNEL_VERSION"
+    if [[ "$KERNEL_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
+        normalized_version="${KERNEL_VERSION}.0"
+    fi
+
     # Determine build variant based on flags and compute the localversion suffix.
     local package_name=""
     local localversion=""
@@ -741,9 +747,10 @@ metapackage() {
 
     log "Packaging kernel meta-package: ${package_name}"
     log "Computed localversion string: ${localversion}"
+    log "Using kernel version: ${normalized_version}"
 
-    # Set up the dependency list based on the kernel version and variant
-    local depends="linux-image-${KERNEL_VERSION}${localversion},linux-headers-${KERNEL_VERSION}${localversion},linux-libc-dev"
+    # Set up the dependency list based on the normalized kernel version and variant
+    local depends="linux-image-${normalized_version}${localversion},linux-headers-${normalized_version}${localversion},linux-libc-dev"
 
     # Create a package directory for the current build
     local pkg_dir="${BUILDPATH}/${package_name}"
@@ -757,10 +764,10 @@ metapackage() {
 Section: kernel
 Priority: optional
 Homepage: ${HOMEPAGE:-http://example.com}
-Standards-Version: ${KERNEL_VERSION}
+Standards-Version: ${normalized_version}
 
 Package: ${package_name}
-Version: ${KERNEL_VERSION}${localversion}
+Version: ${normalized_version}${localversion}
 Maintainer: ${MAINTAINER:-Your Name <email@example.com>}
 
 Depends: ${depends}
@@ -768,7 +775,7 @@ Provides: kernel-image
 Replaces: kernel-image
 Conflicts: kernel-image
 Architecture: amd64
-Description: Meta-Package for the ${package_name} built on kernel version ${KERNEL_VERSION}
+Description: Meta-Package for the ${package_name} built on kernel version ${normalized_version}
 EOF
 
     log "Assembling Debian meta-package using equivs-build"
@@ -779,8 +786,9 @@ EOF
     fi
     popd >/dev/null
 
-    log "Debian meta-package generated successfully: ${package_name} (version: ${KERNEL_VERSION}${localversion})"
+    log "Debian meta-package generated successfully: ${package_name} (version: ${normalized_version}${localversion})"
 }
+
 
 
 
