@@ -116,9 +116,14 @@ detect_latest_kernel() {
     #         jq -r '.releases[] | select(.moniker == "stable" and (.iseol == false or .iseol == null)) | .version' | \
     #         sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
 
+    #version=$(echo "$releases_json" | \
+    #    jq -r '.releases[] | select((.moniker == "stable" or .moniker == "mainline") and (.iseol == false or .iseol == null)) | .version' | \
+    #    sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
+
     version=$(echo "$releases_json" | \
-        jq -r '.releases[] | select((.moniker == "stable" or .moniker == "mainline") and (.iseol == false or .iseol == null)) | .version' | \
+        jq -r '.releases[] | select((.moniker == "stable") and (.iseol == false or .iseol == null) and (.version | test("^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"))) | .version' | \
         sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
+
 
     # Validate version format
     if [[ ! "$version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
