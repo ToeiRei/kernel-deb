@@ -105,7 +105,7 @@ parse_config() {
 detect_latest_kernel() {
     # Get releases JSON quietly
     local releases_json
-    releases_json=$(curl -s https://www.kernel.org/releases.json) || {
+    releases_json=$(curl -sL https://www.kernel.org/releases.json) || {
         echo "Failed to fetch releases from kernel.org" >&2
         return 1
     }
