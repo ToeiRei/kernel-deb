@@ -52,7 +52,7 @@ log() {
     
     # Only send an ntfy notification if the level meets or exceeds DEFAULT_NOTIFY_LEVEL
     if [[ -n "$NTFY_URL" && $level_value -ge $DEFAULT_NOTIFY_LEVEL ]]; then
-        curl -s -H "Title: ${SCRIPT_NAME:-Script}" -d "$message" "$NTFY_URL" >/dev/null || true
+        curl -sL -H "Title: ${SCRIPT_NAME:-Script}" -d "$message" "$NTFY_URL" >/dev/null || true
     fi
 }
 
@@ -105,7 +105,7 @@ parse_config() {
 detect_latest_kernel() {
     # Get releases JSON quietly
     local releases_json
-    releases_json=$(curl -sL https://www.kernel.org/releases.json) || {
+    releases_json=$(curl -s https://www.kernel.org/releases.json) || {
         echo "Failed to fetch releases from kernel.org" >&2
         return 1
     }
@@ -116,14 +116,9 @@ detect_latest_kernel() {
     #         jq -r '.releases[] | select(.moniker == "stable" and (.iseol == false or .iseol == null)) | .version' | \
     #         sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
 
-    #version=$(echo "$releases_json" | \
-    #    jq -r '.releases[] | select((.moniker == "stable" or .moniker == "mainline") and (.iseol == false or .iseol == null)) | .version' | \
-    #    sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
-
     version=$(echo "$releases_json" | \
-        jq -r '.releases[] | select((.moniker == "stable") and (.iseol == false or .iseol == null) and (.version | test("^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"))) | .version' | \
+        jq -r '.releases[] | select((.moniker == "stable" or .moniker == "mainline") and (.iseol == false or .iseol == null)) | .version' | \
         sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
-
 
     # Validate version format
     if [[ ! "$version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
