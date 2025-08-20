@@ -1,5 +1,5 @@
 # Stage 1: Build Environment
-FROM debian:latest AS builder
+FROM debian:12 AS builder
 
 # Define a build argument to control local mirror usage.
 ARG USE_LOCAL_MIRROR=false
@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release wget gnupg2 curl jq xz-utils build-essential \
     bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev libdw-dev \
     dwarves bison cmake bash libzstd-dev libxxhash-dev rsync \
-    debhelper git ruby rubygems equivs zip software-properties-common && \
+    debhelper git ruby rubygems perl-base equivs zip software-properties-common && \
     rm -rf /var/lib/apt/lists/*
 
 # If the target architecture is not native, install the appropriate cross toolchain.
