@@ -549,12 +549,42 @@ fetch_sources() {
         rm -rf "$srcdir"
     fi
 
-    # Extract the tarball
+    # Extract the tarball, with a retry mechanism for corruption.
     log "Extracting ${tarball}.${tar_ext} to ${BUILDPATH}"
+    local extract_failed=false
     case "$tar_ext" in
-        xz)  tar -xf "${BUILDPATH}/${tarball}.xz" -C "$BUILDPATH" ;;
-        zst) tar --zstd -xf "${BUILDPATH}/${tarball}.zst" -C "$BUILDPATH" ;;
+        xz)  tar -xf "${BUILDPATH}/${tarball}.xz" -C "$BUILDPATH" || extract_failed=true ;;
+        zst) tar --zstd -xf "${BUILDPATH}/${tarball}.zst" -C "$BUILDPATH" || extract_failed=true ;;
     esac
+
+    if [[ "$extract_failed" == true ]]; then
+        log "Extraction failed. Assuming tarball is corrupt." "WARN"
+        log "Removing corrupt tarball and attempting to re-download..."
+        rm -f "${BUILDPATH}/${tarball}.${tar_ext}"
+
+        # Re-download
+        local new_tar_ext=""
+        for ext in xz zst; do
+            local full_url="${base_url}/${tarball}.${ext}"
+            log "Attempting re-download: $full_url"
+            if curl -fLs ${WGETPARMS} -o "${BUILDPATH}/${tarball}.${ext}" "$full_url"; then
+                new_tar_ext="${ext}"
+                log "Successfully re-downloaded: ${tarball}.${new_tar_ext}"
+                break
+            fi
+        done
+
+        if [[ -z "$new_tar_ext" ]]; then
+            fatal "Could not re-fetch kernel sources for ${KERNEL_VERSION}"
+        fi
+
+        # Re-extract
+        log "Re-attempting extraction with new tarball..."
+        case "$new_tar_ext" in
+            xz)  tar -xf "${BUILDPATH}/${tarball}.xz" -C "$BUILDPATH" || fatal "Extraction failed again after re-download." ;;
+            zst) tar --zstd -xf "${BUILDPATH}/${tarball}.zst" -C "$BUILDPATH" || fatal "Extraction failed again after re-download." ;;
+        esac
+    fi
 
     export SOURCEDIR="$srcdir"
 }
