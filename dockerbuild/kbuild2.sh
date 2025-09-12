@@ -20,7 +20,7 @@ SUFFIX=""
 
 # === New Cross-Compile Variables ===
 # If CROSS_COMPILE is empty, we assume a native build
-ARCH="${ARCH:-x86}"  # Default to x86 if not set
+ARCH="${ARCH:-x86_64}"  # Default to x86_64 if not set
 CROSS_COMPILE="${CROSS_COMPILE:-}"
 
 # Utils
@@ -787,6 +787,16 @@ metapackage() {
     local package_name=""
     local localversion=""
 
+    # Determine debian architecture from kernel make ARCH
+    local deb_arch
+    if [[ "$ARCH" == "x86_64" ]]; then
+        deb_arch="amd64"
+    elif [[ "$ARCH" == "arm64" ]]; then
+        deb_arch="arm64"
+    else
+        fatal "Cannot determine debian architecture for ARCH=${ARCH}"
+    fi
+
     if [[ "$USE_RT" == true ]]; then
         package_name="rt-kernel"
         localversion="-rt"
@@ -830,7 +840,7 @@ Depends: ${depends}
 Provides: kernel-image
 Replaces: kernel-image
 Conflicts: kernel-image
-Architecture: amd64
+Architecture: ${deb_arch}
 Description: Meta-Package for the ${package_name} built on kernel version ${normalized_version}
 EOF
 
