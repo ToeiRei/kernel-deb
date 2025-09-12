@@ -12,6 +12,7 @@ ADD_PATCHES=false
 UPLOAD_PACKAGECLOUD=false
 UPLOAD_NEXUS=false
 PUBLISH_ONLY=false
+MENUCONFIG=false
 KERNEL_VERSION=""
 NTFY_URL=""
 CLEAN_BUILD=false
@@ -861,7 +862,7 @@ upload_kernel() {
     [[ "$UPLOAD_PACKAGECLOUD" == false && "$UPLOAD_NEXUS" == false ]] && return
 
     # Gather all .deb files from BUILDPATH (non-recursively).
-    mapfile -t debs < <(find "$BUILDPATH" -maxdepth 2 -type f -name '*.deb')
+    mapfile -t debs < <(find "$BUILDPATH" -maxdepth 2 -type f -name "*${KERNEL_VERSION}*.deb")
     if [[ ${#debs[@]} -eq 0 ]]; then
          fatal "No deb packages found in $BUILDPATH"
     fi
@@ -971,11 +972,16 @@ Options: LLVM=$USE_LLVM, RT=$USE_RT, VM=$USE_VM, PATCHES=$ADD_PATCHES, UPLOAD_NE
 archive_config() {
     [[ -z "$SOURCEDIR" || -z "$CONFIGDIR" ]] && fatal "SOURCEDIR or CONFIGDIR not set"
 
-    local flavor="vanilla"
-    [[ "$USE_VM" == true ]] && flavor="vm"
+    local flavor="vanilla" # Default flavor
+    if [[ "$USE_RT" == true ]]; then
+        flavor="rt"
+    elif [[ "$USE_VM" == true ]]; then
+        flavor="vm"
+    fi
 
     log "Archiving .config to ${CONFIGDIR}/${flavor}.config"
-    cp "${SOURCEDIR}/.config" "${CONFIGDIR}/${flavor}.config"
+    cp "${SOURCEDIR}/.config" "${CONFIGDIR}/${flavor}.config" || \
+        log "Failed to archive .config for flavor '${flavor}'. Continuing build." "WARN"
 }
 
 apply_llvm_tweaks() {
