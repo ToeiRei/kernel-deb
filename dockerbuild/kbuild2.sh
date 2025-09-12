@@ -894,12 +894,22 @@ EOF
 
 
 package_kernel() {
-    # Recursively find all .deb files in BUILDPATH, including meta-packages in subdirectories.
-    mapfile -t all_debs < <(find "$BUILDPATH" -type f -name '*.deb')
+    # Determine debian architecture from kernel make ARCH
+    local deb_arch
+    if [[ "$ARCH" == "x86_64" ]]; then
+        deb_arch="amd64"
+    elif [[ "$ARCH" == "arm64" ]]; then
+        deb_arch="arm64"
+    else
+        fatal "Cannot determine debian architecture for ARCH=${ARCH}"
+    fi
+
+    # Recursively find all .deb files in BUILDPATH for the current architecture.
+    mapfile -t all_debs < <(find "$BUILDPATH" -type f \( -name "*_${deb_arch}.deb" -o -name "*_all.deb" \))
 
     # Ensure we found at least one .deb file.
     if [[ ${#all_debs[@]} -eq 0 ]]; then
-        fatal "No .deb packages found in $BUILDPATH"
+        fatal "No .deb packages found in $BUILDPATH for architecture ${deb_arch}"
     fi
 
     # Filter out debug packages which typically contain "dbg" or "dbgsym" in their names.
@@ -914,7 +924,7 @@ package_kernel() {
 
     # Abort if, after filtering, no packages remain.
     if [[ ${#debs[@]} -eq 0 ]]; then
-        fatal "No non-debug .deb packages found in $BUILDPATH"
+        fatal "No non-debug .deb packages found in $BUILDPATH for architecture ${deb_arch}"
     fi
 
     mkdir -p "$RELEASEDIR" || fatal "Failed to create release directory: $RELEASEDIR"
@@ -941,8 +951,8 @@ package_kernel() {
 		custom_tag="_toeirei"
 	fi
 
-    # Construct the zip name using your schema: <flavor>_<version>[_llvm][_<custom>].zip
-    local zipname="${flavor}-kernel_${KERNEL_VERSION}${llvm_tag}${custom_tag}.zip"
+    # Construct the zip name using your schema: <flavor>_<version>_<arch>[_llvm][_<custom>].zip
+    local zipname="${flavor}-kernel_${KERNEL_VERSION}_${deb_arch}${llvm_tag}${custom_tag}.zip"
     log "Packaging .deb files into $zipname"
 
     # Create a zip archive containing only the filtered .deb packages.
