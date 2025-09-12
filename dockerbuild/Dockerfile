@@ -1,5 +1,5 @@
 # Stage 1: Build Environment
-FROM debian:12 AS builder
+FROM debian:13 AS builder
 
 # Define a build argument to control local mirror usage.
 ARG USE_LOCAL_MIRROR=false
@@ -11,7 +11,7 @@ ARG CROSS_COMPILE_PREFIX=
 # Environment variables and noninteractive mode
 ENV CCACHEVER=4.11.3
 ENV DEBIAN_FRONTEND=noninteractive
-ENV LLVM_VERSION=18
+ENV LLVM_VERSION=21
 
 # Conditionally copy local apt mirror files if the build argument is set.
 # Since COPY doesn't support conditionals, we use a RUN block instead.
@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release wget gnupg2 curl jq xz-utils build-essential \
     bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev libdw-dev \
     dwarves bison cmake bash libzstd-dev libxxhash-dev rsync \
-    debhelper git ruby rubygems perl-base equivs zip software-properties-common && \
+    debhelper git ruby rubygems perl-base equivs zip python3 && \
     rm -rf /var/lib/apt/lists/*
 
 # If the target architecture is not native, install the appropriate cross toolchain.
@@ -54,9 +54,16 @@ RUN if [ "$TARGET_ARCH" != "x86" ]; then \
       echo "Native build for x86"; \
     fi
 
-# Install LLVM using the apt script
-RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && \
-    ./llvm.sh ${LLVM_VERSION} && rm llvm.sh && \
+# Install LLVM manually as software-properties-common is gone in Debian 13
+RUN DISTRO=$(lsb_release -sc) && \
+    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/$DISTRO/ llvm-toolchain-$DISTRO-${LLVM_VERSION} main" > /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        clang-${LLVM_VERSION} \
+        lld-${LLVM_VERSION} \
+        llvm-${LLVM_VERSION} && \
+    rm -rf /var/lib/apt/lists/* && \
     for bin in clang clang++ ld.lld llvm-ar llvm-nm llvm-objcopy llvm-readelf llvm-strip; do \
       update-alternatives --install /usr/bin/$bin $bin /usr/bin/${bin}-${LLVM_VERSION} 100; \
     done
