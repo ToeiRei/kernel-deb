@@ -207,12 +207,16 @@ config_diff() {
     local generic_config_source="${CONFIGDIR}/${config_variant}.config"
     local config_source=""
 
-    if [[ -f "$arch_config_source" ]]; then
+    if [[ -f "$arch_config_source" ]]; then # Always prefer arch-specific
         config_source="$arch_config_source"
-    elif [[ -f "$generic_config_source" ]]; then
+    elif [[ -z "$CROSS_COMPILE" && -f "$generic_config_source" ]]; then # Fallback only for native builds
         config_source="$generic_config_source"
     else
-        log "No baseline config found for variant '${config_variant}' (arch '${ARCH}'). Skipping diff." "WARN"
+        if [[ -n "$CROSS_COMPILE" ]]; then
+            log "Cross-compiling, but no baseline arch-specific config found at ${arch_config_source}. Skipping diff." "WARN"
+        else
+            log "No baseline config found for variant '${config_variant}' (arch '${ARCH}'). Skipping diff." "WARN"
+        fi
         return
     fi
 
@@ -650,12 +654,16 @@ prepare_source_tree() {
     local generic_config_source="${CONFIGDIR}/${config_variant}.config"
     local config_source=""
 
-    if [[ -f "$arch_config_source" ]]; then
+    if [[ -f "$arch_config_source" ]]; then # Always prefer arch-specific
         config_source="$arch_config_source"
-    elif [[ -f "$generic_config_source" ]]; then
+    elif [[ -z "$CROSS_COMPILE" && -f "$generic_config_source" ]]; then # Fallback only for native builds
         config_source="$generic_config_source"
     else
-        fatal "Missing kernel config: Tried ${arch_config_source} and ${generic_config_source}"
+        if [[ -n "$CROSS_COMPILE" ]]; then
+            fatal "Cross-compiling, but architecture-specific config not found: ${arch_config_source}"
+        else
+            fatal "Missing kernel config: Tried ${arch_config_source} and ${generic_config_source}"
+        fi
     fi
 
     log "Copying baseline configuration from $config_source"
