@@ -1,20 +1,30 @@
+x-common-volumes: &common-volumes
+  - ~/.ccache:/ccache
+  - ./build:/build
+  - ../kernel-configs:/config
+  - ./release:/release
+  - ./patches:/patches
+  - ./config.json:/usr/local/bin/config.json
+  - ~/kernel-deb/:/gitrepo
+  - ./.packagecloud:/root/.packagecloud
+
+x-native-build: &native-build
+  context: .
+  args:
+    TARGET_ARCH: ${TARGET_ARCH:-x86_64}
+    CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-}
+
+x-cross-build: &cross-build
+  context: .
+  args:
+    TARGET_ARCH: ${CROSS_TARGET_ARCH:-arm64}
+    CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-aarch64-linux-gnu-}
+
 services:
   kernel-builder:
-    build:
-      context: .
-      args:
-        TARGET_ARCH: ${TARGET_ARCH:-x86_64}
-        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-}
+    build: *native-build
     container_name: kernel-builder
-    volumes:
-      - ~/.ccache:/ccache
-      - ./build:/build
-      - ../kernel-configs:/config
-      - ./release:/release
-      - ./patches:/patches
-      - ./config.json:/usr/local/bin/config.json
-      - ~/kernel-deb/:/gitrepo
-      - ./.packagecloud:/root/.packagecloud
+    volumes: *common-volumes
     environment:
       - TZ=Europe/Vienna
       - ARCH=${TARGET_ARCH:-x86_64}
@@ -23,21 +33,9 @@ services:
     tty: true
 
   shell:
-    build:
-      context: .
-      args:
-        TARGET_ARCH: ${TARGET_ARCH:-x86_64}
-        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-}
+    build: *native-build
     container_name: shell
-    volumes:
-      - ~/.ccache:/ccache
-      - ./build:/build
-      - ../kernel-configs:/config
-      - ./release:/release
-      - ./patches:/patches
-      - ./config.json:/usr/local/bin/config.json
-      - ~/kernel-deb/:/gitrepo
-      - ./.packagecloud:/root/.packagecloud
+    volumes: *common-volumes
     environment:
       - TZ=Europe/Vienna
     stdin_open: true
@@ -45,23 +43,9 @@ services:
     entrypoint: /bin/bash
 
   kernel-builder-cross:
-    build:
-      context: .
-      args:
-        # Use separate env var for cross build target (defaults to arm64)
-        TARGET_ARCH: ${CROSS_TARGET_ARCH:-arm64}
-        # For arm64, the cross compile prefix is "aarch64-linux-gnu-"
-        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-aarch64-linux-gnu-}
+    build: *cross-build
     container_name: kernel-builder-cross
-    volumes:
-      - ~/.ccache:/ccache
-      - ./build:/build
-      - ../kernel-configs:/config
-      - ./release:/release
-      - ./patches:/patches
-      - ./config.json:/usr/local/bin/config.json
-      - ~/kernel-deb/:/gitrepo
-      - ./.packagecloud:/root/.packagecloud
+    volumes: *common-volumes
     environment:
       - TZ=Europe/Vienna
       - ARCH=${CROSS_TARGET_ARCH:-arm64}
@@ -70,21 +54,9 @@ services:
     tty: true
 
   shell-cross:
-    build:
-      context: .
-      args:
-        TARGET_ARCH: ${CROSS_TARGET_ARCH:-arm64}
-        CROSS_COMPILE_PREFIX: ${CROSS_COMPILE_PREFIX:-aarch64-linux-gnu-}
+    build: *cross-build
     container_name: cross-shell
-    volumes:
-      - ~/.ccache:/ccache
-      - ./build:/build
-      - ../kernel-configs:/config
-      - ./release:/release
-      - ./patches:/patches
-      - ./config.json:/usr/local/bin/config.json
-      - ~/kernel-deb/:/gitrepo
-      - ./.packagecloud:/root/.packagecloud
+    volumes: *common-volumes
     environment:
       - TZ=Europe/Vienna
     stdin_open: true
