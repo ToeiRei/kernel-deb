@@ -352,8 +352,8 @@ enrich_diff_markdown() {
         echo ""
         for opt in $changed; do
             local old_val new_val
-            old_val=$(grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
-            new_val=$(grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2- || true)
+            old_val=$( (grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2-) || true)
+            new_val=$( (grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2-) || true)
             [[ -z "$old_val" ]] && old_val="(not set)"
             [[ -z "$new_val" ]] && new_val="(not set)"
             echo "* [~] ${opt}=${old_val} → ${new_val}"
