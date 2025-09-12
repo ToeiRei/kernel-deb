@@ -244,13 +244,19 @@ enrich_diff_markdown() {
     local version_patterns="VERSION|RELEASE|GCC|CLANG|RUSTC|LLVM"
     local important_patterns="KVM|SECURITY|SELINUX|APPARMOR|MODULE|DRM|NET|SCHED|PCI|USB|VIRTIO|MEMORY|CPU|ACPI|EFI"
     local driver_patterns="_DRIVER|_HCD|_UDC|_HID|_INPUT|_TOUCHSCREEN|_WATCHDOG|_PHY|_GPIO"
-
+    
     local added removed changed pahole_changes version_changes important_changes driver_changes
-    added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns" || true)
-    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)    
-    changed=$( (grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" || true) | \
-              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}')
 
+    # With 'set -o pipefail', a grep pipeline will fail if any grep command finds no matches.
+    # We use an 'if' statement to safely capture the output or set it to an empty string on failure.
+    if ! added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns"); then added=""; fi
+    if ! removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns"); then removed=""; fi
+    if ! changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
+              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}'); then
+        changed=""
+    fi
+
+    # For single grep commands, '|| true' is sufficient to prevent script exit on no match.
     pahole_changes=$(grep -E "$pahole_patterns" "$diff_file" || true)
     version_changes=$(grep -E "$version_patterns" "$diff_file" || true)
     important_changes=$(grep -E "$important_patterns" "$diff_file" || true)
