@@ -877,9 +877,9 @@ Architecture: ${deb_arch}
 Description: Meta-Package for the ${package_name} built on kernel version ${normalized_version}
 EOF
 
-    log "Assembling Debian meta-package using equivs-build"
+    log "Assembling Debian meta-package for arch ${deb_arch} using equivs-build"
     pushd "$pkg_dir" >/dev/null || fatal "Unable to change to package directory: $pkg_dir"
-    if ! equivs-build "${cfg_file}"; then
+    if ! equivs-build --arch "${deb_arch}" "${cfg_file}"; then
         popd >/dev/null
         fatal "Failed to build Debian meta-package using equivs-build"
     fi
