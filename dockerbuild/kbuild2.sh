@@ -222,9 +222,26 @@ config_diff() {
     "${SOURCEDIR}/scripts/diffconfig" "$config_source" "$active_config" > "$RELEASEDIR/config_changes-${config_variant}.diff"
     log "Config changes stored at $RELEASEDIR/config_changes-${config_variant}.diff"
 
-    # Enhance the diff output with markdown formatting for GitHub release notes
-    enrich_diff_markdown "$RELEASEDIR/config_changes-${config_variant}.diff" > "$RELEASEDIR/config_changes-${config_variant}-enriched.md"
-    log "Enriched config changes stored at $RELEASEDIR/config_changes-${config_variant}-enriched.md"
+    # Safely enhance the diff output with markdown formatting for GitHub release notes
+    log "Attempting to enrich config diff for markdown..."
+    local enriched_file="${RELEASEDIR}/config_changes-${config_variant}-enriched.md"
+    local error_log
+    if ! error_log=$(enrich_diff_markdown "$RELEASEDIR/config_changes-${config_variant}.diff" 2>&1 > "$enriched_file"); then
+        log "Enriching config diff failed for variant '$config_variant'. This will not stop the build." "WARN"
+        log "Error details from enricher: ${error_log}" "DEBUG"
+        # Create a fallback markdown file with the raw diff and a warning.
+        {
+            echo "### Configuration Changes Analysis"
+            echo ""
+            echo "> **Warning:** Automatic analysis of config changes failed. The raw diff is provided below."
+            echo '```diff'
+            cat "$RELEASEDIR/config_changes-${config_variant}.diff"
+            echo '```'
+        } > "$enriched_file"
+        log "Created a fallback enriched file with the raw diff at ${enriched_file}"
+    else
+        log "Enriched config changes stored at ${enriched_file}"
+    fi
 }
 
 
@@ -350,14 +367,16 @@ enrich_diff_markdown() {
         echo ""
         echo "#### Changed Option Values"
         echo ""
-        for opt in $changed; do
+        while IFS= read -r opt; do
+            # Skip empty lines that might result from the pipeline
+            [[ -z "$opt" ]] && continue
             local old_val new_val
             old_val=$( (grep -E "^-${opt}=" "$diff_file" | head -1 | cut -d= -f2-) || true)
             new_val=$( (grep -E "^\+${opt}=" "$diff_file" | head -1 | cut -d= -f2-) || true)
             [[ -z "$old_val" ]] && old_val="(not set)"
             [[ -z "$new_val" ]] && new_val="(not set)"
             echo "* [~] ${opt}=${old_val} → ${new_val}"
-        done
+        done <<< "$changed"
     }
 
     [[ $version_count -gt 0 ]] && {
