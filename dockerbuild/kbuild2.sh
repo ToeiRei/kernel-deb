@@ -247,9 +247,9 @@ enrich_diff_markdown() {
 
     local added removed changed pahole_changes version_changes important_changes driver_changes
     added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns" || true)
-    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)
-    changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
-              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}' || true)
+    removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns" || true)    
+    changed=$( (grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" || true) | \
+              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}')
 
     pahole_changes=$(grep -E "$pahole_patterns" "$diff_file" || true)
     version_changes=$(grep -E "$version_patterns" "$diff_file" || true)
