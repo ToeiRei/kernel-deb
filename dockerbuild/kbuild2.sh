@@ -202,12 +202,23 @@ config_diff() {
         config_variant="rt"
     fi
 
-    # Define the baseline and active config file paths
-    local config_source="${CONFIGDIR}/${config_variant}.config"
+    # Define the baseline config file path, preferring arch-specific
+    local arch_config_source="${CONFIGDIR}/${config_variant}-${ARCH}.config"
+    local generic_config_source="${CONFIGDIR}/${config_variant}.config"
+    local config_source=""
+
+    if [[ -f "$arch_config_source" ]]; then
+        config_source="$arch_config_source"
+    elif [[ -f "$generic_config_source" ]]; then
+        config_source="$generic_config_source"
+    else
+        log "No baseline config found for variant '${config_variant}' (arch '${ARCH}'). Skipping diff." "WARN"
+        return
+    fi
+
     local active_config="${SOURCEDIR}/.config"
 
-    # Validate that the necessary config files exist
-    [[ ! -f "$config_source" ]] && fatal "Missing baseline kernel config: $config_source"
+    # Validate that the active config file exists
     [[ ! -f "$active_config" ]] && fatal "Missing active kernel config: $active_config"
 
     # Ensure that the diffconfig tool exists and is executable
@@ -593,15 +604,6 @@ fetch_sources() {
 configure_kernel() {
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR is not set"
 
-    local config_variant="vanilla"
-    [[ "$USE_VM" == true ]] && config_variant="vm"
-    local config_source="${CONFIGDIR}/${config_variant}.config"
-
-    [[ -f "$config_source" ]] || fatal "Missing kernel config: $config_source"
-
-    log "Copying config from $config_source"
-    cp "$config_source" "${SOURCEDIR}/.config"
-
     pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source directory: $SOURCEDIR"
 
     # Build up the make options
@@ -611,10 +613,13 @@ configure_kernel() {
         make_opts+=("LLVM=1" "LLVM_IAS=1")
     fi
 
-    if [[ -n "${CCOPTS:-}" && -n "$CROSS_COMPILE" ]]; then
-        make_opts+=("CC=${CROSS_COMPILE}${CCOPTS}" "HOSTCC=${CCOPTS}")
-    elif [[ -n "${CCOPTS:-}" ]]; then
-        make_opts+=("CC=${CCOPTS}" "HOSTCC=${CCOPTS}")
+    if [[ -n "${CCOPTS:-}" ]]; then
+        if [[ -n "$CROSS_COMPILE" ]]; then
+            local cross_cc="${CCOPTS/gcc/${CROSS_COMPILE}gcc}"
+            make_opts+=("CC=${cross_cc}" "HOSTCC=${CCOPTS}")
+        else
+            make_opts+=("CC=${CCOPTS}" "HOSTCC=${CCOPTS}")
+        fi
     fi
 
     if [[ -n "${LD:-}" ]]; then
@@ -640,7 +645,19 @@ prepare_source_tree() {
     [[ "$USE_VM" == true ]] && config_variant="vm"
     [[ "$USE_RT" == true ]] && config_variant="rt"
 
-    local config_source="${CONFIGDIR}/${config_variant}.config"
+    # Prefer architecture-specific config, fall back to generic
+    local arch_config_source="${CONFIGDIR}/${config_variant}-${ARCH}.config"
+    local generic_config_source="${CONFIGDIR}/${config_variant}.config"
+    local config_source=""
+
+    if [[ -f "$arch_config_source" ]]; then
+        config_source="$arch_config_source"
+    elif [[ -f "$generic_config_source" ]]; then
+        config_source="$generic_config_source"
+    else
+        fatal "Missing kernel config: Tried ${arch_config_source} and ${generic_config_source}"
+    fi
+
     log "Copying baseline configuration from $config_source"
     cp "$config_source" "${SOURCEDIR}/.config"
 
@@ -745,11 +762,14 @@ build_kernel() {
     local make_params=()
 
     # Preserve compiler options; using eval helps split multiword commands properly.
-    if [[ -n "${CCOPTS:-}" && -n "$CROSS_COMPILE" ]]; then
-        # For cross-compiling, prepend the prefix to CC, but not HOSTCC
-        eval "make_params+=(\"CC=${CROSS_COMPILE}${CCOPTS}\" \"HOSTCC=${CCOPTS}\")"
-    elif [[ -n "${CCOPTS:-}" ]]; then
-        eval "make_params+=(\"CC=${CCOPTS}\" \"HOSTCC=${CCOPTS}\")"
+    if [[ -n "${CCOPTS:-}" ]]; then
+        if [[ -n "$CROSS_COMPILE" ]]; then
+            # For cross-compiling, inject the CROSS_COMPILE prefix into the CCOPTS string.
+            local cross_cc="${CCOPTS/gcc/${CROSS_COMPILE}gcc}"
+            eval "make_params+=(\"CC=${cross_cc}\" \"HOSTCC=${CCOPTS}\")"
+        else
+            eval "make_params+=(\"CC=${CCOPTS}\" \"HOSTCC=${CCOPTS}\")"
+        fi
     fi
 
     # Set LLVM options if enabled.
@@ -1059,9 +1079,11 @@ archive_config() {
         flavor="vm"
     fi
 
-    log "Archiving .config to ${CONFIGDIR}/${flavor}.config"
-    cp "${SOURCEDIR}/.config" "${CONFIGDIR}/${flavor}.config" || \
-        log "Failed to archive .config for flavor '${flavor}'. Continuing build." "WARN"
+    local target_config_path="${CONFIGDIR}/${flavor}-${ARCH}.config"
+
+    log "Archiving .config to ${target_config_path}"
+    cp "${SOURCEDIR}/.config" "$target_config_path" || \
+        log "Failed to archive .config for flavor '${flavor}' and arch '${ARCH}'. Continuing build." "WARN"
 }
 
 apply_llvm_tweaks() {
