@@ -878,36 +878,46 @@ upload_kernel() {
             fi
 
             # Attempt to push the package with retries
-            local attempt success=0
+            local attempt success=0 output
             for attempt in {1..3}; do
-                if package_cloud push "$PACKAGECLOUD_DEB" "$pkg"; then
+                if output=$(package_cloud push "$PACKAGECLOUD_DEB" "$pkg" 2>&1); then
                     log "Successfully uploaded $pkg to Packagecloud on attempt $attempt."
                     success=1
                     break
                 else
-                    log "Attempt $attempt failed for $pkg. Retrying in 2 seconds..." "WARN"
+                    if [[ "$output" == *"Filename has already been taken"* ]]; then
+                        log "Package $(basename "$pkg") already exists on Packagecloud. Skipping."
+                        success=1
+                        break
+                    fi
+                    log "Attempt $attempt to push $(basename "$pkg") to Packagecloud failed. Retrying in 2 seconds... Error: $output" "WARN"
                     sleep 2
                 fi
             done
             if [[ $success -ne 1 ]]; then
-                log "Failed to upload $pkg to Packagecloud after 3 attempts. Skipping this package." "WARN"
+                log "Failed to upload $pkg to Packagecloud after 3 attempts. Skipping this package." "ERROR"
             fi
 
             # Optional: If you have a second Packagecloud repository, push there too.
             if [[ -n "${PACKAGECLOUD_DEB2:-}" ]]; then
                 success=0
                 for attempt in {1..3}; do
-                    if package_cloud push "$PACKAGECLOUD_DEB2" "$pkg"; then
+                    if output=$(package_cloud push "$PACKAGECLOUD_DEB2" "$pkg" 2>&1); then
                         log "Successfully uploaded $pkg to secondary Packagecloud repo on attempt $attempt."
                         success=1
                         break
                     else
-                        log "Attempt $attempt to push $pkg to secondary Packagecloud repo failed. Retrying in 2 seconds..." "WARN"
+                        if [[ "$output" == *"Filename has already been taken"* ]]; then
+                            log "Package $(basename "$pkg") already exists in secondary Packagecloud repo. Skipping."
+                            success=1
+                            break
+                        fi
+                        log "Attempt $attempt to push $(basename "$pkg") to secondary Packagecloud repo failed. Retrying in 2 seconds... Error: $output" "WARN"
                         sleep 2
                     fi
                 done
                 if [[ $success -ne 1 ]]; then
-                    log "Failed to upload $pkg to secondary Packagecloud repo after 3 attempts." "WARN"
+                    log "Failed to upload $pkg to secondary Packagecloud repo after 3 attempts." "ERROR"
                 fi
             fi
         done
