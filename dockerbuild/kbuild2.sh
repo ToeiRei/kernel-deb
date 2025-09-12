@@ -608,11 +608,13 @@ configure_kernel() {
     local make_opts=()
 
     if [[ "$USE_LLVM" == true || "${LLVM:-false}" == true ]]; then
-        make_opts+=( "LLVM=1" "LLVM_IAS=1" )
+        make_opts+=("LLVM=1" "LLVM_IAS=1")
     fi
 
-    if [[ -n "${CCOPTS:-}" ]]; then
-        make_opts+=( "CC=${CCOPTS}" "HOSTCC=${CCOPTS}" )
+    if [[ -n "${CCOPTS:-}" && -n "$CROSS_COMPILE" ]]; then
+        make_opts+=("CC=${CROSS_COMPILE}${CCOPTS}" "HOSTCC=${CCOPTS}")
+    elif [[ -n "${CCOPTS:-}" ]]; then
+        make_opts+=("CC=${CCOPTS}" "HOSTCC=${CCOPTS}")
     fi
 
     if [[ -n "${LD:-}" ]]; then
@@ -743,7 +745,10 @@ build_kernel() {
     local make_params=()
 
     # Preserve compiler options; using eval helps split multiword commands properly.
-    if [[ -n "${CCOPTS:-}" ]]; then
+    if [[ -n "${CCOPTS:-}" && -n "$CROSS_COMPILE" ]]; then
+        # For cross-compiling, prepend the prefix to CC, but not HOSTCC
+        eval "make_params+=(\"CC=${CROSS_COMPILE}${CCOPTS}\" \"HOSTCC=${CCOPTS}\")"
+    elif [[ -n "${CCOPTS:-}" ]]; then
         eval "make_params+=(\"CC=${CCOPTS}\" \"HOSTCC=${CCOPTS}\")"
     fi
 
