@@ -969,10 +969,21 @@ upload_kernel() {
     # If neither upload flag is enabled, simply return.
     [[ "$UPLOAD_PACKAGECLOUD" == false && "$UPLOAD_NEXUS" == false ]] && return
 
-    # Gather all .deb files from BUILDPATH (non-recursively).
-    mapfile -t debs < <(find "$BUILDPATH" -maxdepth 2 -type f -name "*${KERNEL_VERSION}*.deb")
+    # Determine debian architecture from kernel make ARCH
+    local deb_arch
+    if [[ "$ARCH" == "x86_64" ]]; then
+        deb_arch="amd64"
+    elif [[ "$ARCH" == "arm64" ]]; then
+        deb_arch="arm64"
+    else
+        fatal "Cannot determine debian architecture for ARCH=${ARCH}"
+    fi
+
+    # Gather all .deb files for the current architecture from BUILDPATH.
+    mapfile -t debs < <(find "$BUILDPATH" -maxdepth 2 -type f \( -name "*_${deb_arch}.deb" -o -name "*_all.deb" \))
+
     if [[ ${#debs[@]} -eq 0 ]]; then
-         fatal "No deb packages found in $BUILDPATH"
+         fatal "No deb packages found in $BUILDPATH for architecture ${deb_arch}"
     fi
 
     if [[ "$UPLOAD_PACKAGECLOUD" == true ]]; then
