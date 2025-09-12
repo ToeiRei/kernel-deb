@@ -45,8 +45,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN if [ "$TARGET_ARCH" != "x86_64" ]; then \
       if [ "$TARGET_ARCH" = "arm64" ]; then \
          echo "Installing cross-compiler for arm64..."; \
+         dpkg --add-architecture ${TARGET_ARCH} && \
          apt-get update && \
-         apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu && \
+         apt-get install -y --no-install-recommends \
+            gcc-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu \
+            libssl-dev:${TARGET_ARCH} \
+            libelf-dev:${TARGET_ARCH} && \
          rm -rf /var/lib/apt/lists/*; \
       else \
          echo "Cross compilation for target architecture $TARGET_ARCH is not yet supported"; \
