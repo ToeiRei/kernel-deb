@@ -3,7 +3,7 @@ DOCKER_COMPOSE = COMPOSE_BAKE=true docker compose
 SERVICE = kernel-builder
 SHELL_SERVICE = shell
 CROSS_SERVICE = kernel-builder-cross
-CROSS_SHELL_SERVICE = cross-shell
+CROSS_SHELL_SERVICE = shell-cross
 DEFAULT_ARGS = --upload-pkgcloud
 ARGS ?= $(DEFAULT_ARGS)
 IMAGE_NAME = dockerbuild-kernel-builder
@@ -57,7 +57,15 @@ build:  ## Build Docker image with local mirror support
 
 
 run: check-image  ## Run kernel build with optional args
-	$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS)
+	@$(BUILDTIME) start kbuild2 run
+	@$(DOCKER_COMPOSE) run --rm $(SERVICE) $(ARGS); \
+	status=$$?; \
+	if [ $$status -eq 0 ]; then \
+	    $(BUILDTIME) stop; \
+	else \
+	    $(BUILDTIME) failed; \
+	    exit $$status; \
+	fi
 
 menuconfig: check-image  ## Launch kernel menuconfig
 	$(DOCKER_COMPOSE) run --rm $(SERVICE) --menuconfig $(ARGS)
@@ -127,4 +135,3 @@ cross-menuconfig: check-image  ## Launch menuconfig for cross target
 
 cross-publish: check-image  ## Publish cross build release to GitHub
 	$(DOCKER_COMPOSE) run --rm $(CROSS_SERVICE) --publish
-
