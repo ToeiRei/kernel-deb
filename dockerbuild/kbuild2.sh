@@ -44,6 +44,20 @@ ARCH="${ARCH:-x86_64}"
 # If this is empty, the script performs a native build.
 CROSS_COMPILE="${CROSS_COMPILE:-}"
 
+# --- Logging Configuration ---
+
+# Define numerical values for log levels. Lower numbers are less severe.
+declare -A LOG_LEVELS=(
+    [DEBUG]=0
+    [INFO]=1
+    [WARN]=2
+    [ERROR]=3
+    [FATAL]=4
+)
+
+# Set a threshold to only send ntfy notifications for messages at or above this level.
+DEFAULT_NOTIFY_LEVEL=${DEFAULT_NOTIFY_LEVEL:-2} # Default to WARN
+
 # --- Utility Functions ---
 
 ##
