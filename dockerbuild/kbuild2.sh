@@ -113,13 +113,13 @@ detect_latest_kernel() {
 
     # Extract version with proper error handling
     local version
-    version=$(echo "$releases_json" | \
-             jq -r '.releases[] | select(.moniker == "stable" and (.iseol == false or .iseol == null)) | .version' | \
-             sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
-
     #version=$(echo "$releases_json" | \
-    #    jq -r '.releases[] | select((.moniker == "stable" or .moniker == "mainline") and (.iseol == false or .iseol == null)) | .version' | \
-    #    sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
+    #         jq -r '.releases[] | select(.moniker == "stable" and (.iseol == false or .iseol == null)) | .version' | \
+    #         sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
+
+    version=$(echo "$releases_json" | \
+        jq -r '.releases[] | select((.moniker == "mainline" or .moniker == "stable") and (.iseol == false or .iseol == null) and (.version | test("-rc") | not)) | .version' | \
+        sort -V | tail -n1 | sed 's/^v//' 2>/dev/null)
 
     # Validate version format
     if [[ ! "$version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
@@ -153,7 +153,7 @@ parse_args() {
                 CROSS_COMPILE="$1"
                 ;;
             -h|--help) usage ;;
-            [0-9]*.[0-9]*.[0-9]*) KERNEL_VERSION="$1" ;;
+            [0-9]*.[0-9]*) KERNEL_VERSION="$1" ;;
             --clean|--cleanup) CLEAN_BUILD=true ;;
             --suffix)
                 shift
@@ -810,10 +810,11 @@ metapackage() {
     [[ -z "${BUILDPATH:-}" ]] && fatal "BUILDPATH is not set"
     [[ -z "${KERNEL_VERSION:-}" ]] && fatal "KERNEL_VERSION is not set"
 
-    # Normalize KERNEL_VERSION to always have three fields: major.minor.patch
-    local normalized_version="$KERNEL_VERSION"
+    # If the kernel version is in x.y format, append .0
     if [[ "$KERNEL_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
         normalized_version="${KERNEL_VERSION}.0"
+    else
+        normalized_version="${KERNEL_VERSION}"
     fi
 
     # Determine build variant based on flags and compute the localversion suffix.
@@ -1192,7 +1193,7 @@ EOF
 
     # Build the package
     log "Building source package..."
-    dpkg-source -b . || fatal "dpkg-source failed"
+    dpkg-source --force-bad-version -b . || fatal "dpkg-source failed"
 
     # Move artifacts
     mkdir -p "$RELEASEDIR"
