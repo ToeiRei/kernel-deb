@@ -2,47 +2,65 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# --- Global Variables ---
+
+# Path to the configuration file, assumed to be in the same directory as the script.
 CONFIG_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.json"
+# The name of the script itself, used for logging and messages.
 SCRIPT_NAME="$(basename "$0")"
 
+# --- Build Flags (initialized to default values) ---
+
+# Set to 'true' to use the LLVM/Clang toolchain for building the kernel.
 USE_LLVM=false
+# Set to 'true' to build a kernel with real-time (PREEMPT_RT) patches and configuration.
 USE_RT=false
+# Set to 'true' to build a minimal kernel suitable for virtual machines.
 USE_VM=false
+# Set to 'true' to apply custom patches from the configured patch directory.
 ADD_PATCHES=false
+# Set to 'true' to upload the final Debian packages to a Packagecloud repository.
 UPLOAD_PACKAGECLOUD=false
+# Set to 'true' to upload the final Debian packages to a Nexus repository.
 UPLOAD_NEXUS=false
+# Set to 'true' to only perform the GitHub release step, skipping the build.
 PUBLISH_ONLY=false
+# Set to 'true' to run an interactive 'make menuconfig' session.
 MENUCONFIG=false
+# Holds the target kernel version (e.g., "6.9.3"). If empty, the script auto-detects the latest.
 KERNEL_VERSION=""
+# URL for ntfy.sh push notifications.
 NTFY_URL=""
+# Set to 'true' to clean up build artifacts instead of running a build.
 CLEAN_BUILD=false
+# A custom suffix to append to the kernel's local version string.
 SUFFIX=""
 
-# === New Cross-Compile Variables ===
-# If CROSS_COMPILE is empty, we assume a native build
-ARCH="${ARCH:-x86_64}"  # Default to x86_64 if not set
+# --- Cross-Compilation Variables ---
+
+# Target architecture for the kernel build (e.g., x86_64, arm64). Defaults to x86_64.
+ARCH="${ARCH:-x86_64}"
+# The prefix for the cross-compilation toolchain (e.g., 'aarch64-linux-gnu-').
+# If this is empty, the script performs a native build.
 CROSS_COMPILE="${CROSS_COMPILE:-}"
 
-# Utils
+# --- Utility Functions ---
+
+##
+# Prints a fatal error message to stderr, logs it, and exits the script with an error code.
+# @param $* The error message to display.
+##
 fatal() {
     echo "[FATAL] $*" >&2
     log "$*" "FATAL"
     exit 1
 }
 
-# Define numerical values for log levels.
-# Lower numbers imply less severity.
-declare -A LOG_LEVELS=(
-    [DEBUG]=0
-    [INFO]=1
-    [WARN]=2
-    [ERROR]=3
-)
-
-# Set a threshold to prevent ntfy from sending every log message.
-# For instance, only notify if severity is WARN (2) or above.
-DEFAULT_NOTIFY_LEVEL=${DEFAULT_NOTIFY_LEVEL:-1}
-
+##
+# Logs a message to stdout and optionally sends a notification via ntfy.
+# @param $1 The message to log.
+# @param $2 The log level (DEBUG, INFO, WARN, ERROR). Defaults to DEBUG.
+##
 log() {
     local message="$1"
     local level="${2:-DEBUG}"  # Default to DEBUG if no level is provided
@@ -57,7 +75,13 @@ log() {
     fi
 }
 
-# Config loader
+# --- Core Functions ---
+
+##
+# Loads configuration settings from 'config.json'.
+# If the file doesn't exist, it falls back to using environment variables,
+# which is useful for CI/CD environments.
+##
 parse_config() {
     command -v jq >/dev/null || fatal "jq is required but not found in PATH"
 
@@ -102,7 +126,11 @@ parse_config() {
     fi
 }
 
-# Kernel version logic
+##
+# Detects the latest stable kernel version by fetching release data from kernel.org.
+# It intelligently filters for 'mainline' or 'stable' releases that are not
+# release candidates (i.e., do not contain '-rc').
+##
 detect_latest_kernel() {
     # Get releases JSON quietly
     local releases_json
@@ -130,7 +158,10 @@ detect_latest_kernel() {
     echo "$version"
 }
 
-# Args
+##
+# Parses command-line arguments and sets the corresponding global flags and variables.
+# Handles options like --llvm, --rt, --arch, etc.
+##
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -166,6 +197,9 @@ parse_args() {
     done
 }
 
+##
+# Displays the script's usage instructions and exits.
+##
 usage() {
     cat <<EOF
 Usage: $SCRIPT_NAME [version] [options]
@@ -193,6 +227,12 @@ EOF
     exit 0
 }
 
+##
+# Generates a diff of the kernel configuration.
+# It compares the final '.config' file used for the build against a baseline
+# configuration file (e.g., 'vanilla-x86_64.config') to show what has changed.
+# The result is saved to a file in the release directory.
+##
 config_diff() {
     # Determine the configuration variant based on flags
     local config_variant="vanilla"
@@ -259,7 +299,13 @@ config_diff() {
     fi
 }
 
-
+##
+# Takes a raw config diff file and enriches it with Markdown formatting.
+# It categorizes changes (added, removed, changed values), identifies important
+# subsystem or driver changes, and wraps large sections in <details> tags
+# to make the output more readable in GitHub releases.
+# @param $1 Path to the raw diff file.
+##
 enrich_diff_markdown() {
     local diff_file=$1
     # Validate input
@@ -421,7 +467,12 @@ enrich_diff_markdown() {
 }
 
 
-
+##
+# Publishes the build artifacts to GitHub as a new release.
+# It commits any local changes, creates a Git tag for the version,
+# crafts a release description from the enriched config diffs, and uploads
+# the final .zip archives as release assets.
+##
 release_to_github() {
     pushd "/gitrepo" >/dev/null || fatal "Cannot change directory to Git repo"
     
@@ -520,7 +571,12 @@ release_to_github() {
     popd >/dev/null
 }
 
-
+##
+# Fetches the kernel source tarball for the specified KERNEL_VERSION.
+# It first checks if the tarball already exists locally. If not, it attempts
+# to download it from kernel.org, trying both .xz and .zst formats.
+# It also includes a retry mechanism in case of a corrupt download.
+##
 fetch_sources() {
     mkdir -p "$BUILDPATH" "$RELEASEDIR"
     local major_version="${KERNEL_VERSION%%.*}"
@@ -604,7 +660,11 @@ fetch_sources() {
     export SOURCEDIR="$srcdir"
 }
 
-
+##
+# Configures the kernel source tree by running 'make olddefconfig'.
+# This command takes an existing .config file and updates it to be valid for the
+# current kernel version, resolving any new or removed options non-interactively.
+##
 configure_kernel() {
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR is not set"
 
@@ -637,6 +697,12 @@ configure_kernel() {
     popd >/dev/null
 }
 
+##
+# Prepares the kernel source tree for a build.
+# This is a high-level function that orchestrates fetching the sources,
+# copying the correct baseline .config file, applying any automated tweaks
+# (like for LLVM or RT), and running the initial configuration step.
+##
 prepare_source_tree() {
     # Ensure we have a valid config loaded
     parse_config
@@ -683,6 +749,12 @@ prepare_source_tree() {
     popd >/dev/null
 }
 
+##
+# Provides an interactive way to modify the kernel configuration.
+# It prepares the source tree just like a normal build, then launches
+# 'make menuconfig' to allow the user to make changes. Afterward, it archives
+# the new configuration.
+##
 run_menuconfig() {
     [[ ! -t 0 ]] && fatal "Menuconfig requires interactive terminal"
 
@@ -707,6 +779,11 @@ run_menuconfig() {
     exit 0
 }
 
+##
+# Modifies the kernel .config file to disable module and kernel image signing.
+# This is useful to prevent build failures in environments where signing keys
+# are not configured.
+##
 disable_signing() {
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR not set; cannot disable signing"
 
@@ -727,6 +804,10 @@ disable_signing() {
     popd >/dev/null
 }
 
+##
+# Applies custom patches to the kernel source tree.
+# It looks for any '.patch' files in the configured PATCHDIR and applies them using 'patch -p1'.
+##
 apply_patches() {
     if [[ "$ADD_PATCHES" != true ]]; then
         log "Patch application is disabled. Skipping."
@@ -761,6 +842,11 @@ apply_patches() {
     popd >/dev/null
 }
 
+##
+# The main kernel compilation function.
+# It runs 'make' to build the kernel, then 'make modules', and finally
+# 'make bindeb-pkg' to create the Debian packages (.deb).
+##
 build_kernel() {
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR not set for build"
 
@@ -805,6 +891,12 @@ build_kernel() {
     popd >/dev/null
 }
 
+##
+# Creates a Debian "meta-package" using 'equivs-build'.
+# This is a small, empty package whose sole purpose is to depend on the actual
+# kernel packages (image, headers, libc-dev). This provides a convenient way
+# to install a complete kernel set with a single package name (e.g., 'vanilla-kernel').
+##
 metapackage() {
     # Ensure required variables are set
     [[ -z "${BUILDPATH:-}" ]] && fatal "BUILDPATH is not set"
@@ -890,10 +982,12 @@ EOF
 }
 
 
-
-
-
-
+##
+# Packages the final build artifacts into a distributable format.
+# It finds all the generated .deb files (excluding debug symbols), and bundles
+# them into a single .zip archive, which is then placed in the release directory.
+# A SHA256 checksum for the zip file is also generated.
+##
 package_kernel() {
     # Determine debian architecture from kernel make ARCH
     local deb_arch
@@ -965,7 +1059,11 @@ package_kernel() {
     log "Checksum generated at $checksum_file"
 }
 
-
+##
+# Uploads the generated Debian packages to remote repositories.
+# It supports uploading to both Packagecloud and/or a Nexus repository,
+# based on the command-line flags and configuration.
+##
 upload_kernel() {
     # If neither upload flag is enabled, simply return.
     [[ "$UPLOAD_PACKAGECLOUD" == false && "$UPLOAD_NEXUS" == false ]] && return
@@ -1052,6 +1150,10 @@ upload_kernel() {
     fi
 }
 
+##
+# Cleans up temporary files and directories created during the build process.
+# This includes the extracted source directory, build metadata, and intermediate package files.
+##
 cleanup_artifacts() {
     log "Starting cleanup of build artifacts..."
 
@@ -1091,7 +1193,10 @@ cleanup_artifacts() {
     log "Cleanup completed."
 }
 
-
+##
+# Logs a summary of the build environment and configuration.
+# This includes kernel version, CPU count, toolchain info, and enabled build options.
+##
 log_environment() {
     log $"Build Environment:
 Kernel: ${KERNEL_VERSION} | CPUs: $(nproc) | Mem: $(free -h | awk '/Mem:/{print $2}')
@@ -1099,6 +1204,11 @@ Toolchain: $(gcc --version | head -n1) | CC: ${CCOPTS:-system default}
 Options: LLVM=$USE_LLVM, RT=$USE_RT, VM=$USE_VM, PATCHES=$ADD_PATCHES, UPLOAD_NEXUS=$UPLOAD_NEXUS, UPLOAD_PACKAGECLOUD=$UPLOAD_PACKAGECLOUD" "INFO"
 }
 
+##
+# Archives the final '.config' file used for the build.
+# It copies the file from the source directory to the config directory, renaming it
+# to match the build flavor and architecture (e.g., 'vm-arm64.config') for future use.
+##
 archive_config() {
     [[ -z "$SOURCEDIR" || -z "$CONFIGDIR" ]] && fatal "SOURCEDIR or CONFIGDIR not set"
 
@@ -1116,6 +1226,10 @@ archive_config() {
         log "Failed to archive .config for flavor '${flavor}' and arch '${ARCH}'. Continuing build." "WARN"
 }
 
+##
+# Applies kernel configuration tweaks specific to building with LLVM/Clang.
+# This typically involves enabling Link-Time Optimization (LTO).
+##
 apply_llvm_tweaks() {
     [[ "$USE_LLVM" != true ]] && return
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR is not set"
@@ -1128,6 +1242,10 @@ apply_llvm_tweaks() {
     popd >/dev/null
 }
 
+##
+# Applies kernel configuration tweaks specific to building a real-time (RT) kernel.
+# This enables the PREEMPT_RT option and related scheduler settings.
+##
 apply_rt_tweaks() {
     [[ "$USE_RT" != true ]] && return
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR is not set"
@@ -1141,6 +1259,11 @@ apply_rt_tweaks() {
     popd >/dev/null
 }
 
+##
+# Generates a Debian source package in the '3.0 (quilt)' format.
+# This creates the .dsc, .orig.tar.gz, and .debian.tar.xz files needed to
+# represent the source code and packaging instructions, then zips them for release.
+##
 generate_source_package() {
     [[ -z "$SOURCEDIR" || -z "$KERNEL_VERSION" ]] && 
         fatal "Missing vars for source package generation"
@@ -1216,7 +1339,11 @@ EOF
     log "Checksum generated at $checksum_file"
 }
 
-
+##
+# The main entry point of the script.
+# It parses configuration and arguments, then routes execution to the appropriate function
+# based on the user's request (e.g., run a build, clean up, or show menuconfig).
+##
 main() {
     # Capture the start time
     local start_time
@@ -1258,6 +1385,10 @@ main() {
     exit 0
 }
 
+##
+# Defines the standard, end-to-end build workflow.
+# This function calls all the necessary steps in sequence to go from source code to final packages.
+##
 run_standard_build() {
     log "Starting build for Linux $KERNEL_VERSION"
     log_environment
@@ -1274,5 +1405,5 @@ run_standard_build() {
 
 }
 
-
+# Execute the main function, passing all script arguments to it.
 main "$@"
