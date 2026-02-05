@@ -320,7 +320,8 @@ config_diff() {
     log "Attempting to enrich config diff for markdown..."
     local enriched_file="${RELEASEDIR}/config_changes-${config_variant}-enriched.md"
     local error_log
-    if ! error_log=$(enrich_diff_markdown "$RELEASEDIR/config_changes-${config_variant}.diff" 2>&1 > "$enriched_file"); then
+    # Run the enricher, write its stdout to the enriched file, and capture stderr
+    if ! error_log=$(enrich_diff_markdown "$RELEASEDIR/config_changes-${config_variant}.diff" > "$enriched_file" 2>&1); then
         log "Enriching config diff failed for variant '$config_variant'. This will not stop the build." "WARN"
         log "Error details from enricher: ${error_log}" "DEBUG"
         # Create a fallback markdown file with the raw diff and a warning.
@@ -369,7 +370,7 @@ enrich_diff_markdown() {
     if ! added=$(grep -E '^\+[^+]' "$diff_file" | grep -vE "$version_patterns"); then added=""; fi
     if ! removed=$(grep -E '^\-[^-]' "$diff_file" | grep -vE "$version_patterns"); then removed=""; fi
     if ! changed=$(grep -E '^[+-][^+-]' "$diff_file" | grep -vE "$version_patterns" | \
-              awk -F'=' '{print $1}' | sed 's/^[+-]//' | sort | uniq -c | awk '$1==2{print $2}'); then
+              sed -E 's/^[+-]([^=]+)=.*/\1/' | sort | uniq -c | awk '$1==2{print $2}'); then
         changed=""
     fi
 
@@ -726,7 +727,11 @@ configure_kernel() {
     fi
 
     if [[ -n "${LD:-}" ]]; then
-        make_opts+=( "LD=${LD}" )
+        if command -v "${LD}" >/dev/null 2>&1; then
+            make_opts+=( "LD=${LD}" )
+        else
+            log "Requested linker '${LD}' not found in PATH; skipping LD override" "WARN"
+        fi
     fi
 
     make_opts+=("-j$(nproc)" "olddefconfig")
