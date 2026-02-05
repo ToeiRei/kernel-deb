@@ -9,9 +9,9 @@ ARG TARGET_ARCH=x86_64
 ARG CROSS_COMPILE_PREFIX=
 
 # Environment variables and noninteractive mode
-ENV CCACHEVER=4.11.3
+ENV CCACHEVER=4.12.2
 ENV DEBIAN_FRONTEND=noninteractive
-ENV LLVM_VERSION=21
+ENV LLVM_VERSION=22
 
 # Conditionally copy local apt mirror files if the build argument is set.
 # Since COPY doesn't support conditionals, we use a RUN block instead.
@@ -34,10 +34,10 @@ RUN apt -o "Acquire::https::Verify-Peer=false" update && \
 
 # Install all required dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    lsb-release wget gnupg2 curl jq xz-utils build-essential \
-    bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev libdw-dev \
-    dwarves bison cmake bash libzstd-dev libxxhash-dev rsync \
-    debhelper git ruby rubygems perl-base equivs zip python3 && \
+  lsb-release wget gnupg2 curl jq xz-utils build-essential \
+  bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev libdw-dev \
+  dwarves bison cmake bash libzstd-dev libxxhash-dev rsync \
+  debhelper git ruby ruby-dev rubygems perl-base equivs zip python3 && \
     rm -rf /var/lib/apt/lists/*
 
 # If the target architecture is not native, install the appropriate cross toolchain.
@@ -61,19 +61,22 @@ RUN if [ "$TARGET_ARCH" != "x86_64" ]; then \
       echo "Native build for x86_64"; \
     fi
 
-# Install LLVM manually as software-properties-common is gone in Debian 13
-RUN DISTRO=$(lsb_release -sc) && \
-    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/$DISTRO/ llvm-toolchain-$DISTRO-${LLVM_VERSION} main" > /etc/apt/sources.list.d/llvm.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        clang-${LLVM_VERSION} \
-        lld-${LLVM_VERSION} \
-        llvm-${LLVM_VERSION} && \
-    rm -rf /var/lib/apt/lists/* && \
-    for bin in clang clang++ ld.lld llvm-ar llvm-nm llvm-objcopy llvm-readelf llvm-strip; do \
-      update-alternatives --install /usr/bin/$bin $bin /usr/bin/${bin}-${LLVM_VERSION} 100; \
-    done
+# Temporarily allow insecure repositories for LLVM install (SHA1 signature workaround)
+# Allow insecure repositories and unauthenticated packages during LLVM install
+RUN cat > /etc/apt/apt.conf.d/99insecure-llvm <<'EOF'
+Acquire::AllowInsecureRepositories "true";
+APT::Get::AllowUnauthenticated "true";
+EOF
+# Install LLVM using official llvm.sh installer script
+RUN wget https://apt.llvm.org/llvm.sh && \
+  chmod +x llvm.sh && \
+  ./llvm.sh ${LLVM_VERSION} && \
+  rm llvm.sh && \
+  # remove apt sources and key added by llvm.sh to avoid later apt failures
+  rm -f /etc/apt/sources.list.d/http_apt_llvm_org_* || true && \
+  rm -f /etc/apt/trusted.gpg.d/apt.llvm.org.asc || true
+# Remove insecure apt config after LLVM install
+RUN rm /etc/apt/apt.conf.d/99insecure-llvm
 
 # Build ccache from source
 RUN mkdir -p /tmp/ccache && cd /tmp/ccache && \
