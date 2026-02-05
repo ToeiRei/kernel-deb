@@ -6,6 +6,32 @@ IFS=$'\n\t'
 
 # Path to the configuration file, assumed to be in the same directory as the script.
 CONFIG_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.json"
+
+# --- Required Tools ---
+REQUIRED_TOOLS=(curl tar zip sha256sum)
+# Some tools are only needed for certain steps, but check all for safety
+OPTIONAL_TOOLS=(jq gh equivs-build dpkg-source package_cloud)
+
+check_required_tools() {
+    local missing=()
+    for tool in "${REQUIRED_TOOLS[@]}"; do
+        command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "[FATAL] Missing required tools: ${missing[*]}" >&2
+        exit 1
+    fi
+}
+
+check_optional_tools() {
+    local missing=()
+    for tool in "${OPTIONAL_TOOLS[@]}"; do
+        command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        echo "[WARN] Missing optional tools: ${missing[*]} (some features may not work)" >&2
+    fi
+}
 # The name of the script itself, used for logging and messages.
 SCRIPT_NAME="$(basename "$0")"
 
@@ -97,9 +123,8 @@ log() {
 # which is useful for CI/CD environments.
 ##
 parse_config() {
-    command -v jq >/dev/null || fatal "jq is required but not found in PATH"
-
     if [[ -f "$CONFIG_FILE" ]]; then
+        command -v jq >/dev/null || fatal "jq is required but not found in PATH (needed for config.json parsing)"
         BUILDPATH=$(jq -r '.buildpath' "$CONFIG_FILE")
         CONFIGDIR=$(jq -r '.configdir' "$CONFIG_FILE")
         RELEASEDIR=$(jq -r '.releasedir' "$CONFIG_FILE")
@@ -107,7 +132,7 @@ parse_config() {
         CCOPTS=$(jq -r '.ccopts // empty' "$CONFIG_FILE")
         HOMEPAGE=$(jq -r '.homepage // empty' "$CONFIG_FILE")
         MAINTAINER=$(jq -r '.maintainer // empty' "$CONFIG_FILE")
-        WGETPARMS=$(jq -r '.wgetparms // "-q"' "$CONFIG_FILE")
+        CURL_OPTS=$(jq -r '.curl_opts // "-sL"' "$CONFIG_FILE")
         PACKAGECLOUD_DEB=$(jq -r '.packagecloud_deb // empty' "$CONFIG_FILE")
         PACKAGECLOUD_DEB2=$(jq -r '.packagecloud_deb2 // empty' "$CONFIG_FILE")
         NEXUS_USER=$(jq -r '.nexus_user // empty' "$CONFIG_FILE")
@@ -127,7 +152,7 @@ parse_config() {
         CCOPTS="${CCOPTS:-}"
         HOMEPAGE="${HOMEPAGE:-https://example.com}"
         MAINTAINER="${MAINTAINER:-GitHub Actions <gh@actions.local>}"
-        WGETPARMS="${WGETPARMS:--q}"
+        CURL_OPTS="${CURL_OPTS:--sL}"
         PACKAGECLOUD_DEB="${PACKAGECLOUD_DEB:-}"
         PACKAGECLOUD_DEB2="${PACKAGECLOUD_DEB2:-}"
         NEXUS_USER="${NEXUS_USER:-}"
@@ -148,7 +173,7 @@ parse_config() {
 detect_latest_kernel() {
     # Get releases JSON quietly
     local releases_json
-    releases_json=$(curl -s https://www.kernel.org/releases.json) || {
+    releases_json=$(curl ${CURL_OPTS:- -sL} https://www.kernel.org/releases.json) || {
         echo "Failed to fetch releases from kernel.org" >&2
         return 1
     }
@@ -179,7 +204,7 @@ detect_latest_kernel() {
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --llm|--llvm) USE_LLVM=true ;;
+            --llvm) USE_LLVM=true ;;
             --rt) USE_RT=true ;;
             --vm) USE_VM=true ;;
             --add-patches) ADD_PATCHES=true ;;
@@ -615,7 +640,7 @@ fetch_sources() {
         for ext in xz zst; do
             local full_url="${base_url}/${tarball}.${ext}"
             log "Attempting download: $full_url"
-            if curl -fLs ${WGETPARMS} -o "${BUILDPATH}/${tarball}.${ext}" "$full_url"; then
+            if curl -fL ${CURL_OPTS:- -sL} -o "${BUILDPATH}/${tarball}.${ext}" "$full_url"; then
                 tar_ext="${ext}"
                 log "Successfully downloaded: ${tarball}.${tar_ext}"
                 break
@@ -965,6 +990,15 @@ metapackage() {
     local cfg_file="${pkg_dir}/${package_name}.cfg"
     log "Generating Debian meta-package config at: ${cfg_file}"
 
+
+    # Create postinst script to trigger reboot notification
+    cat >"${pkg_dir}/postinst" <<POSTINST
+#!/bin/sh
+touch /run/reboot-required
+echo "A new kernel was installed. Please reboot your system." > /run/reboot-required
+POSTINST
+    chmod 0755 "${pkg_dir}/postinst"
+
     # Generate the configuration file for the Debian meta-package
     cat <<EOF >"$cfg_file"
 Section: kernel
@@ -982,6 +1016,7 @@ Replaces: kernel-image
 Conflicts: kernel-image
 Architecture: ${deb_arch}
 Description: Meta-Package for the ${package_name} built on kernel version ${normalized_version}
+Post-Inst: postinst
 EOF
 
     log "Assembling Debian meta-package for arch ${deb_arch} using equivs-build"
@@ -1363,6 +1398,8 @@ main() {
     local start_time
     start_time=$(date +%s)
 
+    check_required_tools
+    check_optional_tools
     parse_config
     parse_args "$@"
 
