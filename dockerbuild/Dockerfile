@@ -78,6 +78,13 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 # Remove insecure apt config after LLVM install
 RUN rm /etc/apt/apt.conf.d/99insecure-llvm
 
+# Make LLVM tools available under unversioned names (e.g. clang, ld.lld, clangd)
+RUN for bin in clang clang++ ld.lld llvm-ar llvm-nm llvm-objcopy llvm-readelf llvm-strip clangd lldb; do \
+      if [ -x "/usr/bin/${bin}-${LLVM_VERSION}" ]; then \
+        update-alternatives --install /usr/bin/$bin $bin /usr/bin/${bin}-${LLVM_VERSION} 100 || true; \
+      fi; \
+    done || true
+
 # Build ccache from source
 RUN mkdir -p /tmp/ccache && cd /tmp/ccache && \
     curl -L https://github.com/ccache/ccache/releases/download/v${CCACHEVER}/ccache-${CCACHEVER}.tar.gz | \
