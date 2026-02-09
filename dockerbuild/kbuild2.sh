@@ -544,10 +544,11 @@ release_to_github() {
     git add .
     git commit -m "$1" || log "No changes to commit"
 
-    # Step 5: Create a tag if it doesn’t exist.
+
+    # Step 5: Create a tag if it doesn’t exist, warn if it does.
     local version="$1"
     if git rev-parse "$version" >/dev/null 2>&1; then
-        log "Tag '$version' already exists. Skipping tag creation."
+        log "[WARN] Tag '$version' already exists. Continuing as requested."
     else
         git tag "$version"
         git push --tags
@@ -605,9 +606,29 @@ release_to_github() {
     fi
     log "Attaching the following assets to release: ${assets[*]}"
 
-    # Step 9: Create a draft GitHub release with the release notes and assets.
-    gh release create "$version" -t "Kernel release: $version" -F "$release_notes" "${assets[@]}"
-    log "Release $version published to GitHub as a draft."
+    # Check if release exists
+    if gh release view "$version" >/dev/null 2>&1; then
+        log "Release for tag $version exists. Checking for asset conflicts."
+        for asset in "${assets[@]}"; do
+            asset_name="$(basename "$asset")"
+            if gh release view "$version" --json assets | grep -q '"name":\s*"'$asset_name'"'; then
+                echo "[WARN] Asset $asset_name already exists on release $version."
+                read -p "Do you want to delete and replace $asset_name? [y/N]: " ans
+                if [[ "$ans" =~ ^[Yy]$ ]]; then
+                    gh release delete-asset "$version" "$asset_name" --yes || log "[WARN] Failed to delete asset $asset_name"
+                    gh release upload "$version" "$asset" --clobber
+                else
+                    log "Skipping upload of $asset_name as requested."
+                fi
+            else
+                gh release upload "$version" "$asset"
+            fi
+        done
+    else
+        # Step 9: Create a draft GitHub release with the release notes and assets.
+        gh release create "$version" -t "Kernel release: $version" -F "$release_notes" "${assets[@]}"
+        log "Release $version published to GitHub as a draft."
+    fi
     popd >/dev/null
 }
 
