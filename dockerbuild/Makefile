@@ -135,3 +135,6 @@ cross-menuconfig: check-image  ## Launch menuconfig for cross target
 
 cross-publish: check-image  ## Publish cross build release to GitHub
 	$(DOCKER_COMPOSE) run --rm $(CROSS_SERVICE) --publish
+
+test-enrich: check-image ## Test enrich_diff.sh script with sample diff file
+	$(DOCKER_COMPOSE) run --rm $(SERVICE) bash /dockerbuild/test_enrich_diff.sh /release/config_changes-vm.diff

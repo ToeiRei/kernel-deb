@@ -112,6 +112,11 @@ RUN mkdir -p /build /config /release /patches
 COPY kbuild2.sh /usr/local/bin/kbuild2
 RUN chmod +x /usr/local/bin/kbuild2
 
+
+# Copy the test script for enrichment testing
+COPY test_enrich_diff.sh /dockerbuild/test_enrich_diff.sh
+RUN chmod +x /dockerbuild/test_enrich_diff.sh
+
 # Set working directory for kernel build and run the build script
 WORKDIR /build
 
