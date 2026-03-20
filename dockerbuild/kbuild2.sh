@@ -1377,7 +1377,10 @@ EOF
     echo "13" > debian/compat
     mkdir -p debian/source
     echo "3.0 (quilt)" > debian/source/format
-    echo "1.0" > debian/source/local-options
+    # do not set local-options; writing "1.0" caused dpkg-source to
+    # interpret it as an invalid option ("--1.0") and trigger warnings
+    # and, on some environments, a crash. Leave the file absent unless
+    # specific options are required.
 
     # Minimal changelog
     cat > debian/changelog <<EOF
