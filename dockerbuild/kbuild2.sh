@@ -2,6 +2,18 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# --- Trap Handler for Error Cleanup ---
+# Ensures cleanup happens on exit, error, interrupt, or termination
+cleanup_on_error() {
+    local exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        log "Build failed with exit code $exit_code. Cleaning up..." "ERROR"
+        cleanup_artifacts || true
+    fi
+    exit $exit_code
+}
+trap cleanup_on_error EXIT ERR INT TERM
+
 # --- Global Variables ---
 
 # Path to the configuration file, assumed to be in the same directory as the script.
@@ -111,7 +123,7 @@ log() {
     
     # Only send an ntfy notification if the level meets or exceeds DEFAULT_NOTIFY_LEVEL
     if [[ -n "$NTFY_URL" && $level_value -ge $DEFAULT_NOTIFY_LEVEL ]]; then
-        curl -sL -H "Title: ${SCRIPT_NAME:-Script}" -d "$message" "$NTFY_URL" >/dev/null || true
+        curl --max-time 10 -sL -H "Title: ${SCRIPT_NAME:-Script}" -d "$message" "$NTFY_URL" >/dev/null || true
     fi
 }
 
@@ -125,10 +137,14 @@ log() {
 parse_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
         command -v jq >/dev/null || fatal "jq is required but not found in PATH (needed for config.json parsing)"
-        BUILDPATH=$(jq -r '.buildpath' "$CONFIG_FILE")
-        CONFIGDIR=$(jq -r '.configdir' "$CONFIG_FILE")
-        RELEASEDIR=$(jq -r '.releasedir' "$CONFIG_FILE")
-        PATCHDIR=$(jq -r '.patchdir' "$CONFIG_FILE")
+        # Validate JSON syntax before parsing
+        if ! jq empty "$CONFIG_FILE" 2>/dev/null; then
+            fatal "Invalid JSON in $CONFIG_FILE"
+        fi
+        BUILDPATH=$(jq -r '.buildpath // empty' "$CONFIG_FILE")
+        CONFIGDIR=$(jq -r '.configdir // empty' "$CONFIG_FILE")
+        RELEASEDIR=$(jq -r '.releasedir // empty' "$CONFIG_FILE")
+        PATCHDIR=$(jq -r '.patchdir // empty' "$CONFIG_FILE")
         CCOPTS=$(jq -r '.ccopts // empty' "$CONFIG_FILE")
         HOMEPAGE=$(jq -r '.homepage // empty' "$CONFIG_FILE")
         MAINTAINER=$(jq -r '.maintainer // empty' "$CONFIG_FILE")
@@ -171,9 +187,9 @@ parse_config() {
 # release candidates (i.e., do not contain '-rc').
 ##
 detect_latest_kernel() {
-    # Get releases JSON quietly
+    # Get releases JSON quietly, with a 30-second timeout
     local releases_json
-    releases_json=$(curl ${CURL_OPTS:- -sL} https://www.kernel.org/releases.json) || {
+    releases_json=$(curl --max-time 30 ${CURL_OPTS:- -sL} https://www.kernel.org/releases.json) || {
         echo "Failed to fetch releases from kernel.org" >&2
         return 1
     }
@@ -611,7 +627,7 @@ release_to_github() {
         log "Release for tag $version exists. Checking for asset conflicts."
         for asset in "${assets[@]}"; do
             asset_name="$(basename "$asset")"
-            if gh release view "$version" --json assets | grep -q '"name":\s*"'$asset_name'"'; then
+            if gh release view "$version" --json assets | grep -qF "\"name\": \"${asset_name}\""; then
                 echo "[WARN] Asset $asset_name already exists on release $version."
                 read -p "Do you want to delete and replace $asset_name? [y/N]: " ans
                 if [[ "$ans" =~ ^[Yy]$ ]]; then
@@ -633,6 +649,68 @@ release_to_github() {
 }
 
 ##
+# Validates that a downloaded file is a valid tarball and not an error page.
+# Checks file size, magic bytes, and tarball listability.
+# @param $1 Path to the tarball file
+# @param $2 Compression format (xz or zst)
+# Returns 0 if valid, 1 if invalid
+##
+validate_tarball() {
+    local tarball_path="$1"
+    local tar_ext="$2"
+
+    # Check if file exists
+    if [[ ! -f "$tarball_path" ]]; then
+        return 1
+    fi
+
+    # Check file size - error pages are typically < 10KB
+    local file_size
+    file_size=$(stat -f%z "$tarball_path" 2>/dev/null || stat -c%s "$tarball_path" 2>/dev/null) || file_size=""
+    if [[ -z "$file_size" ]] || ! [[ "$file_size" =~ ^[0-9]+$ ]]; then
+        log "Could not determine file size (stat command failed). Skipping size check." "WARN"
+    elif [[ $file_size -lt 10240 ]]; then
+        log "Downloaded file is suspiciously small (${file_size} bytes). Likely an error page." "WARN"
+        return 1
+    else
+        log "File size check passed: ${file_size} bytes" "DEBUG"
+    fi
+
+    # Check magic bytes using file command if available (informational only)
+    if command -v file >/dev/null 2>&1; then
+        local file_type
+        file_type=$(file "$tarball_path")
+        case "$tar_ext" in
+            xz)
+                if ! echo "$file_type" | grep -qi "XZ\|xz"; then
+                    log "File type detection says: $file_type (expected XZ). Proceeding with tar test." "DEBUG"
+                fi
+                ;;
+            zst)
+                if ! echo "$file_type" | grep -qi "Zstandard\|zst"; then
+                    log "File type detection says: $file_type (expected Zstandard). Proceeding with tar test." "DEBUG"
+                fi
+                ;;
+        esac
+    fi
+
+    # Try to list tarball contents as a final sanity check
+    local list_cmd
+    case "$tar_ext" in
+        xz)  list_cmd=("tar" "-tJf" "$tarball_path") ;;
+        zst) list_cmd=("tar" "--zstd" "-tf" "$tarball_path") ;;
+    esac
+
+    if ! "${list_cmd[@]}" >/dev/null 2>&1; then
+        log "Cannot list tarball contents. File may be corrupted or invalid. Tried: ${list_cmd[*]}" "WARN"
+        return 1
+    fi
+
+    log "Tarball validation successful for $tar_ext format"
+    return 0
+}
+
+##
 # Fetches the kernel source tarball for the specified KERNEL_VERSION.
 # It first checks if the tarball already exists locally. If not, it attempts
 # to download it from kernel.org, trying both .xz and .zst formats.
@@ -648,12 +726,18 @@ fetch_sources() {
 
     log "Preparing to fetch kernel sources for version: ${KERNEL_VERSION}"
 
-    # Check if an existing tarball is present
+    # Check if an existing tarball is present and validate it
     for ext in xz zst; do
         if [[ -f "${BUILDPATH}/${tarball}.${ext}" ]]; then
-            tar_ext="${ext}"
-            log "Found existing tarball: ${tarball}.${tar_ext}"
-            break
+            log "Found existing tarball: ${tarball}.${ext}, validating..."
+            if validate_tarball "${BUILDPATH}/${tarball}.${ext}" "$ext"; then
+                tar_ext="${ext}"
+                log "Existing tarball validated successfully"
+                break
+            else
+                log "Existing tarball failed validation, will re-download" "WARN"
+                rm -f "${BUILDPATH}/${tarball}.${ext}"
+            fi
         fi
     done
 
@@ -662,10 +746,16 @@ fetch_sources() {
         for ext in xz zst; do
             local full_url="${base_url}/${tarball}.${ext}"
             log "Attempting download: $full_url"
-            if curl -fL ${CURL_OPTS:- -sL} -o "${BUILDPATH}/${tarball}.${ext}" "$full_url"; then
-                tar_ext="${ext}"
-                log "Successfully downloaded: ${tarball}.${tar_ext}"
-                break
+            if curl --max-time 300 -fL ${CURL_OPTS:- -sL} -o "${BUILDPATH}/${tarball}.${ext}" "$full_url"; then
+                log "Download completed, validating tarball..."
+                if validate_tarball "${BUILDPATH}/${tarball}.${ext}" "$ext"; then
+                    tar_ext="${ext}"
+                    log "Successfully validated: ${tarball}.${tar_ext}"
+                    break
+                else
+                    log "Validation failed for ${tarball}.${ext}, trying next format..." "WARN"
+                    rm -f "${BUILDPATH}/${tarball}.${ext}"
+                fi
             fi
         done
     fi
@@ -698,11 +788,17 @@ fetch_sources() {
         local new_tar_ext=""
         for ext in xz zst; do
             local full_url="${base_url}/${tarball}.${ext}"
-            log "Attempting re-download: $full_url"
-            if curl -fLs ${WGETPARMS} -o "${BUILDPATH}/${tarball}.${ext}" "$full_url"; then
-                new_tar_ext="${ext}"
-                log "Successfully re-downloaded: ${tarball}.${new_tar_ext}"
-                break
+            log "Retrying download after corruption: $full_url"
+            if curl --max-time 300 -fLs ${CURL_OPTS:- -sL} -o "${BUILDPATH}/${tarball}.${ext}" "$full_url"; then
+                log "Re-download completed, validating tarball..."
+                if validate_tarball "${BUILDPATH}/${tarball}.${ext}" "$ext"; then
+                    new_tar_ext="${ext}"
+                    log "Successfully re-downloaded and validated: ${tarball}.${new_tar_ext}"
+                    break
+                else
+                    log "Validation failed for re-downloaded ${tarball}.${ext}, trying next format..." "WARN"
+                    rm -f "${BUILDPATH}/${tarball}.${ext}"
+                fi
             fi
         done
 
@@ -914,20 +1010,22 @@ apply_patches() {
 ##
 build_kernel() {
     [[ -z "$SOURCEDIR" ]] && fatal "SOURCEDIR not set for build"
+    [[ ! -d "$SOURCEDIR" ]] && fatal "Source directory does not exist: $SOURCEDIR"
 
     pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source directory: $SOURCEDIR"
 
     # Build up the make parameters as an array.
     local make_params=()
 
-    # Preserve compiler options; using eval helps split multiword commands properly.
+    # Preserve compiler options; avoid eval by using arrays directly
     if [[ -n "${CCOPTS:-}" ]]; then
         if [[ -n "$CROSS_COMPILE" ]]; then
-            # For cross-compiling, inject the CROSS_COMPILE prefix into the CCOPTS string.
+            # For cross-compiling, construct the CROSS_COMPILE-prefixed compiler
+            # Note: This assumes CCOPTS is a simple command like 'gcc' or 'clang'
             local cross_cc="${CCOPTS/gcc/${CROSS_COMPILE}gcc}"
-            eval "make_params+=(\"CC=${cross_cc}\" \"HOSTCC=${CCOPTS}\")"
+            make_params+=("CC=${cross_cc}" "HOSTCC=${CCOPTS}")
         else
-            eval "make_params+=(\"CC=${CCOPTS}\" \"HOSTCC=${CCOPTS}\")"
+            make_params+=("CC=${CCOPTS}" "HOSTCC=${CCOPTS}")
         fi
     fi
 
@@ -1220,7 +1318,7 @@ upload_kernel() {
          [[ -z "$NEXUS_USER" || -z "$NEXUS_PW" || -z "$NEXUS_REPO" ]] && fatal "Nexus credentials or repo not configured"
          log "Uploading to Nexus" "INFO"
          for pkg in "${debs[@]}"; do
-			curl -u "${NEXUS_USER}:${NEXUS_PW}" -H "Content-Type: multipart/form-data" --data-binary "@${pkg}" "${NEXUS_REPO}"
+			curl --max-time 60 -u "${NEXUS_USER}:${NEXUS_PW}" -H "Content-Type: multipart/form-data" --data-binary "@${pkg}" "${NEXUS_REPO}"
          done
     fi
 }
@@ -1232,8 +1330,8 @@ upload_kernel() {
 cleanup_artifacts() {
     log "Starting cleanup of build artifacts..."
 
-    # Remove the extracted source directory.
-    if [[ -n "${SOURCEDIR:-}" && -d "$SOURCEDIR" ]]; then
+    # Remove the extracted source directory with safety guards.
+    if [[ -n "${SOURCEDIR:-}" && -d "$SOURCEDIR" && "$SOURCEDIR" != "/" ]]; then
         log "Removing source directory: $SOURCEDIR"
         rm -rf "$SOURCEDIR" || log "Warning: Failed to remove $SOURCEDIR"
     fi
@@ -1245,25 +1343,31 @@ cleanup_artifacts() {
     #    rm -f "$tarball_path" || log "Warning: Failed to remove $tarball_path"
     #fi
 
-    # Remove built .deb packages and build metadata files.
-    log "Removing generated .deb packages and build metadata from $BUILDPATH"
-    find "$BUILDPATH" -maxdepth 1 -type f \( -name '*.deb' -or -name '*.buildinfo' -or -name '*.changes' \) -exec rm -f {} +
+    # Remove built .deb packages and build metadata files with safety checks.
+    if [[ -n "${BUILDPATH:-}" && -d "$BUILDPATH" && "$BUILDPATH" != "/" ]]; then
+        log "Removing generated .deb packages and build metadata from $BUILDPATH"
+        find "$BUILDPATH" -maxdepth 1 -type f \( -name '*.deb' -or -name '*.buildinfo' -or -name '*.changes' \) -exec rm -f {} +
+    fi
 
-    # Remove extracted kernel directories (e.g. linux-6.14.6).
-    for dir in "$BUILDPATH"/linux-*; do
-        if [[ -d "$dir" ]]; then
-            log "Removing extracted kernel directory: $dir"
-            rm -rf "$dir" || log "Warning: Failed to remove directory $dir"
-        fi
-    done
+    # Remove extracted kernel directories (e.g. linux-6.14.6) with safety checks.
+    if [[ -n "${BUILDPATH:-}" && -d "$BUILDPATH" ]]; then
+        while IFS= read -r -d '' dir; do
+            if [[ -d "$dir" && "$dir" != "/" ]]; then
+                log "Removing extracted kernel directory: $dir"
+                rm -rf "$dir" || log "Warning: Failed to remove directory $dir"
+            fi
+        done < <(find "$BUILDPATH" -maxdepth 1 -type d -name 'linux-*' -print0)
+    fi
 
-    # Remove meta-package directories (e.g., vanilla-kernel, rt-kernel, vm-kernel).
-    for meta_dir in "$BUILDPATH"/*kernel; do
-        if [[ -d "$meta_dir" ]]; then
-            log "Removing meta-package directory: $meta_dir"
-            rm -rf "$meta_dir" || log "Warning: Could not remove meta-package directory $meta_dir"
-        fi
-    done
+    # Remove meta-package directories (e.g., vanilla-kernel, rt-kernel, vm-kernel) with safety checks.
+    if [[ -n "${BUILDPATH:-}" && -d "$BUILDPATH" ]]; then
+        while IFS= read -r -d '' meta_dir; do
+            if [[ -d "$meta_dir" && "$meta_dir" != "/" ]]; then
+                log "Removing meta-package directory: $meta_dir"
+                rm -rf "$meta_dir" || log "Warning: Could not remove meta-package directory $meta_dir"
+            fi
+        done < <(find "$BUILDPATH" -maxdepth 1 -type d -name '*kernel' -print0)
+    fi
 
     log "Cleanup completed."
 }
@@ -1394,7 +1498,7 @@ EOF
 
     # Build the package
     log "Building source package..."
-    dpkg-source --force-bad-version -b . || fatal "dpkg-source failed"
+    dpkg-source -b . || fatal "dpkg-source failed"
 
     # Move artifacts
     mkdir -p "$RELEASEDIR"
