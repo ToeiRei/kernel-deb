@@ -1369,6 +1369,13 @@ cleanup_artifacts() {
         done < <(find "$BUILDPATH" -maxdepth 1 -type d -name '*kernel' -print0)
     fi
 
+    # Remove Debian source package files (.dsc, .orig.tar.gz, .debian.tar.*, etc.) with safety checks.
+    # These can cause dpkg-source to crash if left from previous failed builds.
+    if [[ -n "${BUILDPATH:-}" && -d "$BUILDPATH" && "$BUILDPATH" != "/" ]]; then
+        log "Removing stale Debian source package files from $BUILDPATH"
+        find "$BUILDPATH" -maxdepth 1 -type f \( -name '*.dsc' -or -name '*.orig.tar.*' -or -name '*.debian.tar.*' \) -exec rm -f {} + 2>/dev/null || true
+    fi
+
     log "Cleanup completed."
 }
 
@@ -1452,14 +1459,16 @@ generate_source_package() {
     [[ "$USE_RT" == true ]] && package_name="rt-kernel"
     [[ "$USE_VM" == true ]] && package_name="vm-kernel"
 
-    pushd "$SOURCEDIR/.." >/dev/null || fatal "Failed to enter source parent dir"
+    pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source dir"
 
-    # Create orig tarball (required for quilt format)
-    log "Creating upstream tarball..."
-    tar -czf "${package_name}_${KERNEL_VERSION}.orig.tar.gz" "$(basename "$SOURCEDIR")" || 
-        fatal "Failed to create orig tarball"
-
-    pushd "$(basename "$SOURCEDIR")" >/dev/null || fatal "Failed to enter source dir"
+    # Clean up any stale source package files from previous runs to prevent dpkg-source crashes
+    # dpkg-source can segfault if it tries to reuse corrupted .orig.tar.gz files
+    log "Cleaning up stale source package files..."
+    cd .. && rm -f ${package_name}_${KERNEL_VERSION}*.orig.tar.* \
+                   ${package_name}_${KERNEL_VERSION}*.dsc \
+                   ${package_name}_${KERNEL_VERSION}*.debian.tar.* \
+                   ${package_name}_${KERNEL_VERSION}*.tar.xz 2>/dev/null || true
+    cd "$(basename "$SOURCEDIR")" || fatal "Failed to return to source dir"
 
     # Set up minimal debian directory
     mkdir -p debian || fatal "Failed creating debian dir"
@@ -1497,8 +1506,10 @@ ${package_name} (${KERNEL_VERSION}-${suffix}) unstable; urgency=low
 EOF
 
     # Build the package
+    # Use --include-removal to properly handle file deletions between kernel versions
+    # This prevents dpkg-source's quilt format handler from crashing on missing files
     log "Building source package..."
-    dpkg-source -b . || fatal "dpkg-source failed"
+    dpkg-source -b . --include-removal || fatal "dpkg-source failed"
 
     # Move artifacts
     mkdir -p "$RELEASEDIR"
