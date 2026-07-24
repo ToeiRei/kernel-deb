@@ -1459,16 +1459,27 @@ generate_source_package() {
     [[ "$USE_RT" == true ]] && package_name="rt-kernel"
     [[ "$USE_VM" == true ]] && package_name="vm-kernel"
 
-    pushd "$SOURCEDIR" >/dev/null || fatal "Failed to enter source dir"
+    pushd "$SOURCEDIR/.." >/dev/null || fatal "Failed to enter source parent dir"
 
     # Clean up any stale source package files from previous runs to prevent dpkg-source crashes
     # dpkg-source can segfault if it tries to reuse corrupted .orig.tar.gz files
     log "Cleaning up stale source package files..."
-    cd .. && rm -f ${package_name}_${KERNEL_VERSION}*.orig.tar.* \
-                   ${package_name}_${KERNEL_VERSION}*.dsc \
-                   ${package_name}_${KERNEL_VERSION}*.debian.tar.* \
-                   ${package_name}_${KERNEL_VERSION}*.tar.xz 2>/dev/null || true
-    cd "$(basename "$SOURCEDIR")" || fatal "Failed to return to source dir"
+    rm -f ${package_name}_${KERNEL_VERSION}*.orig.tar.* \
+          ${package_name}_${KERNEL_VERSION}*.dsc \
+          ${package_name}_${KERNEL_VERSION}*.debian.tar.* \
+          ${package_name}_${KERNEL_VERSION}*.tar.xz 2>/dev/null || true
+
+    # Create orig tarball with the correct directory name for quilt format
+    # The directory inside must be named ${package_name}-${KERNEL_VERSION}
+    log "Creating upstream tarball..."
+    local srcdir_name="$(basename "$SOURCEDIR")"
+    local orig_dirname="${package_name}-${KERNEL_VERSION}"
+    
+    # Use tar's --transform option to rename the directory inside the archive
+    tar --transform "s|^${srcdir_name}|${orig_dirname}|" -czf "${package_name}_${KERNEL_VERSION}.orig.tar.gz" "$srcdir_name" || \
+        fatal "Failed to create orig tarball"
+
+    pushd "$srcdir_name" >/dev/null || fatal "Failed to enter source dir"
 
     # Set up minimal debian directory
     mkdir -p debian || fatal "Failed creating debian dir"
@@ -1589,7 +1600,7 @@ run_standard_build() {
     log_environment
     prepare_source_tree
     apply_patches
-    generate_source_package
+#    generate_source_package
     build_kernel
     metapackage
     upload_kernel
