@@ -1520,7 +1520,7 @@ EOF
     # Use --include-removal to properly handle file deletions between kernel versions
     # This prevents dpkg-source's quilt format handler from crashing on missing files
     log "Building source package..."
-    dpkg-source -b . --include-removal || fatal "dpkg-source failed"
+    dpkg-source -b . || fatal "dpkg-source failed"
 
     # Move artifacts
     mkdir -p "$RELEASEDIR"
@@ -1600,7 +1600,7 @@ run_standard_build() {
     log_environment
     prepare_source_tree
     apply_patches
-#    generate_source_package
+    generate_source_package
     build_kernel
     metapackage
     upload_kernel
