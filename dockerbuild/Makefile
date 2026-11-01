@@ -6,10 +6,18 @@ CROSS_SERVICE = kernel-builder-cross
 CROSS_SHELL_SERVICE = shell-cross
 DEFAULT_ARGS = --upload-pkgcloud
 ARGS ?= $(DEFAULT_ARGS)
+# Fixed project name so the image name does not depend on the checkout directory name
+export COMPOSE_PROJECT_NAME = dockerbuild
 IMAGE_NAME = dockerbuild-kernel-builder
 LOCAL_KBUILD = kbuild2.sh
 IMAGE_KBUILD = /usr/local/bin/kbuild2
-BUILDTIME := ./buildtime
+# Use the Debian mirror only when explicitly requested (make build USE_LOCAL_MIRROR=true)
+USE_LOCAL_MIRROR ?= false
+# buildtime needs sqlite3 and uuidgen on the host; skip timing if they are missing
+BUILDTIME := $(shell command -v sqlite3 >/dev/null 2>&1 && command -v uuidgen >/dev/null 2>&1 && echo ./buildtime || echo true)
+
+# Bind-mount sources must exist, otherwise Docker creates them as root-owned directories
+$(shell mkdir -p build release patches ccache; [ -f config.json ] || cp config.json.sample config.json; [ -f .packagecloud ] || touch .packagecloud)
 
 # Phony targets
 .PHONY: help all default vanilla vm build run shell publish clean mrproper stop logs menuconfig check-image
@@ -52,7 +60,7 @@ vm: check-image  ## Build VM kernel
 
 build:  ## Build Docker image with local mirror support
 	@$(BUILDTIME) start kbuild2 kbuild-container
-	@$(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=true && \
+	@$(DOCKER_COMPOSE) build --build-arg USE_LOCAL_MIRROR=$(USE_LOCAL_MIRROR) && \
 	  $(BUILDTIME) stop || ( $(BUILDTIME) failed && exit 1 )
 
 

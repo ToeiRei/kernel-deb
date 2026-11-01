@@ -1,12 +1,13 @@
 x-common-volumes: &common-volumes
-  - ~/.ccache:/ccache
-  - ./build:/build
-  - ../kernel-configs:/config
-  - ./release:/release
-  - ./patches:/patches
-  - ./config.json:/usr/local/bin/config.json
-  - ~/kernel-deb/:/gitrepo
-  - ./.packagecloud:/root/.packagecloud
+  # :z relabels for SELinux hosts (Fedora, Gentoo hardened); harmless elsewhere
+  - ${CCACHE_HOST_DIR:-./ccache}:/ccache:z
+  - ./build:/build:z
+  - ../kernel-configs:/config:z
+  - ./release:/release:z
+  - ./patches:/patches:z
+  - ./config.json:/usr/local/bin/config.json:z
+  - ..:/gitrepo:z
+  - ./.packagecloud:/root/.packagecloud:z
 
 x-native-build: &native-build
   context: .
